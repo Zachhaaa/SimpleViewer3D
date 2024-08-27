@@ -1,0 +1,11 @@
+
+.vs/
+**.sln
+bin/
+**.vcxproj
+**.user
+**.filters
+Error-Log.txt
+
+res/shaders/
+imgui.ini
