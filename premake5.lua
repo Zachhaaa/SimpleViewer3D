@@ -1,8 +1,8 @@
-workspace "Vulkan3" 
+workspace "SimpleViewer3D" 
     configurations { "Debug", "OptDebug", "Release" }
     platforms      { "x64" }
 
-project "vlknApp3"
+project "SimpleViewer3Dapp"
     kind       "WindowedApp"
     language   "C++"
     cppdialect "C++17"
@@ -13,11 +13,12 @@ project "vlknApp3"
         "%{os.getenv('VULKAN_SDK')}/include",
         "Dependencies/glm",
         "Dependencies/imgui/backends",
-        "Dependencies/imgui"
+        "Dependencies/imgui",
+        "Dependencies/TimerApi"
     }
 
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
-    links       { "Shcore", "vulkan-1" }
+    links       { "vulkan-1" }
 
     files {
         "src/**.cpp", 
@@ -30,7 +31,9 @@ project "vlknApp3"
         "Dependencies/imgui/backends/imgui_impl_vulkan.cpp",
         "Dependencies/imgui/backends/imgui_impl_vulkan.h",
         "Dependencies/imgui/backends/imgui_impl_win32.cpp",
-        "Dependencies/imgui/backends/imgui_impl_win32.h"
+        "Dependencies/imgui/backends/imgui_impl_win32.h",
+        "Dependencies/TimerApi/*.cpp",
+        "Dependencies/TimerApi/*.hpp"
     }
 
     defines     { "_CRT_SECURE_NO_WARNINGS" }
@@ -47,7 +50,7 @@ project "vlknApp3"
     
     -- Standard Debug mode.
     filter "configurations:Debug"
-        defines { "DEBUG" }
+        defines { "DEBUG", "ENABLE_VK_VALIDATION_LAYERS" }
         symbols "On"
         runtime "Debug"
 
