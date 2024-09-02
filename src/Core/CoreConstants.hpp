@@ -4,6 +4,8 @@
 constexpr float c_WindowAspectRatio = 1.5;
 /// MonitorWidth(px) * percentSize or MonitorWidth(px) * percentSize. Smaller value is used and the other width is calculated based on the aspect ratio. 1.0 maximizes the window and aspect ratio is ignored.
 constexpr float c_WindowPercentSize = 0.85;
+/// Min window width and height
+constexpr int c_minWidth = 300, c_minHeight = 300; 
 
 namespace c_vlkn {
 

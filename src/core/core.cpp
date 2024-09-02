@@ -21,38 +21,17 @@
 
 #include <glm/glm.hpp>
 
-// static funcs
-static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-    }
-    else {
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-}
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        func(instance, debugMessenger, pAllocator);
-    }
-}
-static void check_vk_result(VkResult err)
-{
-    assert(err == VK_SUCCESS && "check_vk_result failed"); 
-}
-
-// static globals (didn't mark static because for less verbose syntax)
 namespace win {
 
-    int  windowWidth, windowHeight; 
-    HWND hwnd;
-    double refreshInterval = 1.0 / 120; // 1 / hz   hz = monitor refresh rate
+    int    windowWidth, windowHeight; 
+    HWND   hwnd;
+    double refreshInterval = 1.0 / 60; // 1 / hz   hz = monitor refresh rate
+    bool   windowMinimized = false;
 
 }
 
 namespace vlkn {
-
+    
     VkInstance               instance;
     VkDebugUtilsMessengerEXT debugMessenger;
     VkSurfaceKHR             surface;
@@ -78,11 +57,169 @@ namespace vlkn {
 
 }
 
-glm::vec3 vertices[] = {
-    {  0.0f, -0.5f,  0.0f },
-    {  0.5f,  0.5f,  0.0f },
-    { -0.5f,  0.5f,  0.0f },
-};
+// static funcs
+static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+    }
+    else {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+}
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(instance, debugMessenger, pAllocator);
+    }
+}
+static void check_vk_result(VkResult err)
+{
+    assert(err == VK_SUCCESS && "check_vk_result failed"); 
+}
+
+static void createSwapchain(VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE) {
+
+    // Swapchain creation 
+    {
+
+        VkSwapchainCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.flags = 0;
+        createInfo.surface = vlkn::surface;
+
+        VkSurfaceCapabilitiesKHR capabilities;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vlkn::physicalDevice, vlkn::surface, &capabilities);
+
+        assert(c_vlkn::imageCount >= capabilities.minImageCount);
+
+        createInfo.minImageCount = c_vlkn::imageCount;
+        createInfo.imageFormat = c_vlkn::format;
+        createInfo.imageColorSpace = c_vlkn::colorSpace;
+
+        if (capabilities.currentExtent.width != UINT32_MAX) {
+            createInfo.imageExtent = capabilities.currentExtent;
+        }
+        else {
+            createInfo.imageExtent = {
+                std::clamp((unsigned)win::windowWidth, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+                std::clamp((unsigned)win::windowHeight, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+            };
+
+        }
+
+        vlkn::windowImageExtent = createInfo.imageExtent;
+
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        uint32_t queueFamilyIndices[] = { vlkn::graphicsQueueIndex, vlkn::presentQueueIndex };
+        if (vlkn::graphicsQueueIndex == vlkn::presentQueueIndex) {
+            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            createInfo.queueFamilyIndexCount = 1;
+        }
+        else {
+            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.queueFamilyIndexCount = 2;
+        }
+        createInfo.pQueueFamilyIndices = queueFamilyIndices;
+        createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode = c_vlkn::presentMode;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = oldSwapchain;
+
+        VkResult err = vkCreateSwapchainKHR(vlkn::device, &createInfo, nullptr, &vlkn::swapchain);
+        assert(err == VK_SUCCESS && "Swapchain creation failed");
+
+    }
+
+    // Swap chain images
+    {
+
+        vkGetSwapchainImagesKHR(vlkn::device, vlkn::swapchain, &vlkn::imageCount, nullptr);
+        vlkn::swapchainImages = new VkImage[vlkn::imageCount];
+        vkGetSwapchainImagesKHR(vlkn::device, vlkn::swapchain, &vlkn::imageCount, vlkn::swapchainImages);
+
+    }
+
+    // Swap chain image views
+    {
+
+        vlkn::swapchainImageViews = new VkImageView[vlkn::imageCount];
+        for (size_t i = 0; i < vlkn::imageCount; ++i) {
+
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.flags = 0;
+            createInfo.image = vlkn::swapchainImages[i];
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = c_vlkn::format;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
+
+            VkResult err = vkCreateImageView(vlkn::device, &createInfo, nullptr, &vlkn::swapchainImageViews[i]);
+            assert(err == VK_SUCCESS && "Image view creation failed");
+
+        }
+
+    }
+
+}
+static void createFramebuffers() {
+
+    vlkn::framebuffers = new VkFramebuffer[vlkn::imageCount];
+
+    for (uint32_t i = 0; i < vlkn::imageCount; ++i) {
+
+        VkImageView attachments[] = { vlkn::swapchainImageViews[i] };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = vlkn::renderPass;
+        framebufferInfo.attachmentCount = arraySize(attachments);
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = vlkn::windowImageExtent.width;
+        framebufferInfo.height = vlkn::windowImageExtent.height;
+        framebufferInfo.layers = 1;
+
+        VkResult err = vkCreateFramebuffer(vlkn::device, &framebufferInfo, nullptr, &vlkn::framebuffers[i]);
+        assert(err == VK_SUCCESS && "Frambuffer creation failed");
+
+    }
+
+}
+static void cleanupSwapchainResources() {
+
+    for (unsigned i = 0; i < vlkn::imageCount; ++i) {
+        vkDestroyFramebuffer(vlkn::device, vlkn::framebuffers[i], nullptr);
+    }
+    delete[] vlkn::framebuffers;
+    for (unsigned i = 0; i < vlkn::imageCount; ++i) {
+        vkDestroyImageView(vlkn::device, vlkn::swapchainImageViews[i], nullptr);
+    }
+    delete[] vlkn::swapchainImageViews;
+    delete[] vlkn::swapchainImages;
+
+}
+void recreateSwapchain() {
+
+    vkDeviceWaitIdle(vlkn::device); 
+
+    cleanupSwapchainResources(); 
+    vkDestroySwapchainKHR(vlkn::device, vlkn::swapchain, nullptr);
+
+    createSwapchain();
+    createFramebuffers(); 
+
+}
 
 void App::init(HINSTANCE hInstance, int nCmdShow) {
 
@@ -389,97 +526,7 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
 
     }
 
-    // Swapchain creation 
-    {
-
-        VkSwapchainCreateInfoKHR createInfo{};
-        createInfo.sType   = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.flags   = 0;
-        createInfo.surface = vlkn::surface;
-
-        VkSurfaceCapabilitiesKHR capabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vlkn::physicalDevice, vlkn::surface, &capabilities);
-
-        assert(c_vlkn::imageCount >= capabilities.minImageCount);
-
-        createInfo.minImageCount   = c_vlkn::imageCount;
-        createInfo.imageFormat     = c_vlkn::format;
-        createInfo.imageColorSpace = c_vlkn::colorSpace;
-
-        if (capabilities.currentExtent.width != UINT32_MAX) {
-            createInfo.imageExtent = capabilities.currentExtent;
-        }
-        else {
-            createInfo.imageExtent = {
-                std::clamp((unsigned)win::windowWidth, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-                std::clamp((unsigned)win::windowHeight, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
-            };
-
-        }
-
-        vlkn::windowImageExtent = createInfo.imageExtent; 
-
-        createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-        uint32_t queueFamilyIndices[] = { vlkn::graphicsQueueIndex, vlkn::presentQueueIndex };
-        if (vlkn::graphicsQueueIndex == vlkn::presentQueueIndex) {
-            createInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
-            createInfo.queueFamilyIndexCount = 1;
-        }
-        else {
-            createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
-            createInfo.queueFamilyIndexCount = 2;
-        }
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
-        createInfo.preTransform        = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-        createInfo.compositeAlpha      = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode         = c_vlkn::presentMode;
-        createInfo.clipped             = VK_TRUE;
-        createInfo.oldSwapchain        = VK_NULL_HANDLE;
-
-        VkResult err = vkCreateSwapchainKHR(vlkn::device, &createInfo, nullptr, &vlkn::swapchain);
-        assert(err == VK_SUCCESS && "Swapchain creation failed");
-
-    }
-
-    // Swap chain images
-    {
-
-        vkGetSwapchainImagesKHR(vlkn::device, vlkn::swapchain, &vlkn::imageCount, nullptr);
-        vlkn::swapchainImages = new VkImage[vlkn::imageCount];
-        vkGetSwapchainImagesKHR(vlkn::device, vlkn::swapchain, &vlkn::imageCount, vlkn::swapchainImages);
-
-    }
-
-    // Swap chain image views
-    {
-
-        vlkn::swapchainImageViews = new VkImageView[vlkn::imageCount];
-        for (size_t i = 0; i < vlkn::imageCount; ++i) {
-
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.flags        = 0;
-            createInfo.image        = vlkn::swapchainImages[i];
-            createInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format       = c_vlkn::format;
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel   = 0;
-            createInfo.subresourceRange.levelCount     = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount     = 1;
-
-            VkResult err = vkCreateImageView(vlkn::device, &createInfo, nullptr, &vlkn::swapchainImageViews[i]);
-            assert(err == VK_SUCCESS && "Image view creation failed");
-
-        }
-
-    }
+    createSwapchain(VK_NULL_HANDLE); 
 
     // Render pass creation 
     {
@@ -530,29 +577,7 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
 
     }
 
-    // Framebuffer creation
-    {
-        vlkn::framebuffers = new VkFramebuffer[vlkn::imageCount]; 
-
-        for (uint32_t i = 0; i < vlkn::imageCount; ++i) {
-
-            VkImageView attachments[] = { vlkn::swapchainImageViews[i] };
-
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = vlkn::renderPass;
-            framebufferInfo.attachmentCount = arraySize(attachments);
-            framebufferInfo.pAttachments = attachments;
-            framebufferInfo.width = vlkn::windowImageExtent.width;
-            framebufferInfo.height = vlkn::windowImageExtent.height;
-            framebufferInfo.layers = 1;
-
-            VkResult err = vkCreateFramebuffer(vlkn::device, &framebufferInfo, nullptr, &vlkn::framebuffers[i]);
-            assert(err == VK_SUCCESS && "Frambuffer creation failed");
-
-        }
-
-    }
+    createFramebuffers();
 
     // Command Pool Creation 
     {
@@ -661,23 +686,24 @@ static double      frameWaitTime = 0.0;
 constexpr uint32_t sampleCount = 200; 
 static float       frameWaitTimesGraph[sampleCount]{}; 
 void App::render() {
+    
+    if (win::windowMinimized) return;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
     ImGui::ShowDemoWindow();
 
-    ImGui::SetNextWindowSize({600, 600}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({ 600, 600 }, ImGuiCond_FirstUseEver);
 
-    ImGuiIO& io = ImGui::GetIO(); 
-    if ( ImGui::Begin("App Data") ) {
-        ImGui::Text("Framerate: %f", io.Framerate); 
-        auto func = [](void* data, int i) { return frameWaitTimesGraph[i]; };
-        constexpr float scale = 0.020; 
+    if (ImGui::Begin("App Data")) {
+        ImGui::Text("Framerate: %f", ImGui::GetIO().Framerate);
+        float (*func)(void*, int) = [](void* data, int i) { return frameWaitTimesGraph[i]; };
+        constexpr float scale = 0.020;
         ImGui::PlotLines("Frame Time Error", func, nullptr, sampleCount, 0, nullptr, -scale, scale, ImVec2(0, 200));
         ImGui::Text("Scale: %.3fms", scale * 1000);
-        ImGui::End(); 
     }
+    ImGui::End();
 
     vkWaitForFences(vlkn::device, 1, &vlkn::frameFinishedFence, VK_TRUE, UINT64_MAX); 
     vkResetFences(vlkn::device, 1, &vlkn::frameFinishedFence); 
@@ -738,20 +764,21 @@ void App::render() {
     presentInfo.pImageIndices = &imageIndex;
 
     err = vkQueuePresentKHR(vlkn::presentQueue, &presentInfo);
-    assert(err == VK_SUCCESS && "Presenting failed");
+    assert(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR  || err == VK_SUBOPTIMAL_KHR && "Presenting failed");
 
     for (float* value = frameWaitTimesGraph; value < frameWaitTimesGraph + sampleCount - 1; ++value) 
         value[0] = value[1];
 
-    double timeError = win::refreshInterval - io.DeltaTime; 
+    double timeError = win::refreshInterval - ImGui::GetIO().DeltaTime; 
     frameWaitTimesGraph[sampleCount - 1] = (float)timeError; 
-    frameWaitTime += std::clamp(timeError, -0.005, 0.005);
+    frameWaitTime += timeError;
 
     sleepFor(frameWaitTime); 
 
 }
 
 void App::close() {
+
     // IMPORTANT: All vulkan clean up must happen after this line.
     vkDeviceWaitIdle(vlkn::device);
     // IMPORTANT: All vulkan clean up must happen after this line. Leave extra space below.
@@ -768,17 +795,11 @@ void App::close() {
     vkDestroySemaphore(vlkn::device, vlkn::imageReadySemaphore, nullptr);
     vkDestroyDescriptorPool(vlkn::device, vlkn::descriptorPool, nullptr);
     vkDestroyCommandPool(vlkn::device, vlkn::commandPool, nullptr);
-    for (unsigned i = 0; i < vlkn::imageCount; ++i) {
-        vkDestroyFramebuffer(vlkn::device, vlkn::framebuffers[i], nullptr);
-    }
-    delete[] vlkn::framebuffers;
     vkDestroyRenderPass(vlkn::device, vlkn::renderPass, nullptr);
-    for (unsigned i = 0; i < vlkn::imageCount; ++i) {
-        vkDestroyImageView(vlkn::device, vlkn::swapchainImageViews[i], nullptr);
-    }
-    delete[] vlkn::swapchainImageViews;
-    delete[] vlkn::swapchainImages;
+    
+    cleanupSwapchainResources(); 
     vkDestroySwapchainKHR(vlkn::device, vlkn::swapchain, nullptr);
+
     vkDestroyDevice(vlkn::device, nullptr);
     vkDestroySurfaceKHR(vlkn::instance, vlkn::surface, nullptr); 
 #ifdef ENABLE_VK_VALIDATION_LAYERS
