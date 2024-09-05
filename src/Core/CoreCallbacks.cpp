@@ -14,32 +14,20 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 namespace win {
 
-    extern int windowWidth;
-    extern int windowHeight;
-    extern bool windowMinimized;
+    extern int   windowWidth;
+    extern int   windowHeight;
+    extern bool  windowMinimized;
+    extern float windowDpi;
 
 }
+
+
 void recreateSwapchain();
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
     if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
         return true;
-
-    if (uMsg == WM_ACTIVATE)
-    {
-        // Extend the frame into the client area.
-        MARGINS margins;
-
-        margins.cxLeftWidth    = 1;     
-        margins.cxRightWidth   = 1;    
-        margins.cyBottomHeight = 1; 
-        margins.cyTopHeight    = 1;    
-
-        DwmExtendFrameIntoClientArea(hwnd, &margins);
-
-        return 0; 
-    }
 
     switch (uMsg)
     {
@@ -51,7 +39,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         RECT windowRect;
         GetClientRect(hwnd, &windowRect);
         // Check if the cursor is in a corner or edge for resizing
-        if (mpos.y < 35 && mpos.y >= borderWidth && mpos.x >= borderWidth && mpos.x <= windowRect.right - borderWidth) {
+        if (mpos.y < s_gui.titleBarHeight && mpos.y >= borderWidth && mpos.x > 50 && mpos.x < windowRect.right - 3 * s_gui.wndBtnWidth ) {
             return HTCAPTION;
         }
         else if (mpos.y < borderWidth && mpos.x < borderWidth) {
@@ -78,34 +66,34 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         else if (mpos.x > windowRect.right - borderWidth) {
             return HTRIGHT;
         }
-
-        break;
+        return HTCLIENT; 
     }
     case WM_SIZE: {
         // If minimized
         if (LOWORD(lParam) == 0)
         { win::windowMinimized = true; return 0; }
-        else 
+        else
         { win::windowMinimized = false; }
 
         win::windowWidth  = LOWORD(lParam);
         win::windowHeight = HIWORD(lParam);
+
         recreateSwapchain();
         App::render();
 
         return 0; 
     }
-    case WM_SHOWWINDOW: {
+    case WM_ACTIVATE: {
         RECT rcClient;
         GetWindowRect(hwnd, &rcClient);
 
-        // Inform the application of the frame change.
         SetWindowPos(hwnd,
             NULL,
             rcClient.left, rcClient.top,
             rcClient.right - rcClient.left, rcClient.bottom - rcClient.top,
             SWP_FRAMECHANGED
         );
+
         return 0; 
 
     }
@@ -119,9 +107,30 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         lpMMI->ptMinTrackSize.y = c_minHeight;
         return 0;
     }
-    case WM_NCCALCSIZE: 
-        if (wParam == TRUE) return 0; 
+    case WM_NCCALCSIZE: {
+        if (wParam == TRUE)
+        {
+            NCCALCSIZE_PARAMS* pncsp = (NCCALCSIZE_PARAMS*)lParam;
+
+            // Offset the 12 pixel extension when maximized
+            if (IsZoomed(hwnd)) {
+                pncsp->rgrc[0].left += 12;  
+                pncsp->rgrc[0].top += 12;   
+                pncsp->rgrc[0].right -= 12; 
+                pncsp->rgrc[0].bottom -= 12;
+            }
+            // Extend the border 1 pixel in for the standard border
+            else {
+                pncsp->rgrc[0].left += 1;
+                pncsp->rgrc[0].top += 1;
+                pncsp->rgrc[0].right -= 1;
+                pncsp->rgrc[0].bottom -= 1;
+            }
+
+            return 0;
+        }
         break;
+    }
     case WM_CLOSE:
         PostQuitMessage(0);
         return 0;
@@ -135,15 +144,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 const char* fileName = "Error-Log.txt";
 #ifdef ENABLE_VK_VALIDATION_LAYERS
 
-int resetFile() {
-    FILE* file = fopen(fileName, "w");
-    assert(file != NULL);
-    fclose(file);
+int openConsole() {
+
+    AllocConsole();
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+
     return 0;
 }
-int a = resetFile(); // just to run resetFile when app boots
-
-#endif 
+int a = openConsole(); // just to run resetFile when app boots
 
 VKAPI_ATTR VkBool32 VKAPI_CALL validationLayerCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT  messageSeverity,
@@ -151,15 +160,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL validationLayerCallback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData
 ) {
-    FILE* logfile = fopen(fileName, "a");
-    assert(logfile != NULL);
 
-    fprintf(logfile, "%s\n", pCallbackData->pMessage);
-
-    fclose(logfile);
-
-    assert(!"Validation layer called! check Error-Log.txt");
+    printf("%s\n\n", pCallbackData->pMessage);
+    assert(!"Validation layer callback called! Check the console for the error.");
 
     return VK_FALSE;
 
 }
+
+#endif 

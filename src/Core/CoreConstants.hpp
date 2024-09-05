@@ -13,5 +13,7 @@ namespace c_vlkn {
 	constexpr VkFormat         format      = VK_FORMAT_R8G8B8A8_UNORM;
 	constexpr VkPresentModeKHR presentMode = VK_PRESENT_MODE_MAILBOX_KHR; 
 	constexpr uint32_t         imageCount  = 2; 
+	constexpr uint32_t         vpWidth     = 1200;
+	constexpr uint32_t         vpHeight    = 800;
 
 }

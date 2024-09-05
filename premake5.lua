@@ -18,7 +18,7 @@ project "SimpleViewer3Dapp"
     }
 
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
-    links       { "vulkan-1" }
+    links       { "vulkan-1", "Shcore"}
 
     files {
         "src/**.cpp", 
