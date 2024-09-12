@@ -18,17 +18,24 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include <Timer.hpp>
 
+#include <Timer.hpp>
+#include <ModelLoader.hpp>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#define  GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
 
 namespace win {
 
     int    windowWidth, windowHeight; 
     HWND   hwnd;
-    double refreshInterval = 1.0 / 60; // 1 / hz   hz = monitor refresh rate
-    float  windowDpi       = 0.0;
-    bool   windowMinimized = false;
+    double refreshInterval  = 1.0 / 60; // 1 / hz   hz = monitor refresh rate
+    float  windowDpi        = 0.0;
+    bool   windowMinimized  = false;
+    bool   openFileShortcut = false;
 
 }
 namespace vlkn {
@@ -52,18 +59,28 @@ namespace vlkn {
 
     namespace vp {
 
-        VkImage          image;
-        VkDeviceMemory   imageMem;
-        VkImageView      imageView;
-        VkRenderPass     renderPass;
-        VkFramebuffer    framebuffer;
-        VkPipelineLayout pipelineLayout; 
-        VkPipeline       graphicsPipeline;
-        VkBuffer         vertBuff;
-        VkDeviceMemory   vertBuffMem;
-        VkSampler        frameSampler; 
-        ImTextureID      framebufferTexID;
-
+        VkImage                image       = VK_NULL_HANDLE;
+        VkDeviceMemory         imageMem    = VK_NULL_HANDLE;
+        VkImageView            imageView   = VK_NULL_HANDLE;
+        VkRenderPass           renderPass  = VK_NULL_HANDLE;
+        VkFramebuffer          framebuffer = VK_NULL_HANDLE;
+        ImVec2                 prevFramebufferSize = { 0.0f, 0.0f };
+        VkImage                depthImage;
+        VkDeviceMemory         depthImageMem;
+        VkImageView            depthImageView;
+        VkPipelineLayout       pipelineLayout; 
+        VkPipeline             graphicsPipeline;
+        VkBuffer               vertBuff;
+        VkDeviceMemory         vertBuffMem;
+        VkBuffer               indexBuff;
+        VkDeviceMemory         indexBuffMem;
+        size_t                 indicesByteSize;
+        float                  largestVert;
+        VkSampler              frameSampler; 
+        VkDescriptorSetLayout  descriptorSetLayout;
+        VkDescriptorSet        descriptorSet;
+        ImTextureID            framebufferTexID;
+        
     }
 
     VkCommandPool            commandPool; 
@@ -76,14 +93,9 @@ namespace vlkn {
 }
 GuiSizes s_gui;
 
-struct Vertex {
-    glm::vec3 pos; 
+struct PushConstants {
+    glm::mat4 model, view, proj; 
 };
-Vertex vertices[] = {
-    { { -0.5f,  0.5f,  0.0f } },
-    { {  0.0f, -0.5f,  0.0f } },
-    { {  0.5f,  0.5f,  0.0f } },
-}; 
 
 // static funcs
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
@@ -246,6 +258,103 @@ void recreateSwapchain() {
 
     createSwapchain();
     createFramebuffers(); 
+
+}
+
+static void createBuffersFromFile(const char* file, float* largestVert) {
+
+    std::vector<mload::Vertex> vertices;
+    std::vector<uint32_t>      indices;
+
+    mload::openModel(file, &vertices, &indices);
+
+    *largestVert = 0.0f;
+    for (const mload::Vertex& vertex : vertices) {
+        if (abs(vertex.pos.x) > *largestVert) *largestVert = abs(vertex.pos.x);
+        if (abs(vertex.pos.y) > *largestVert) *largestVert = abs(vertex.pos.y);
+        if (abs(vertex.pos.z) > *largestVert) *largestVert = abs(vertex.pos.z);
+    }
+
+    size_t verticesByteSize = sizeof(mload::Vertex) * vertices.size();
+    vlkn::vp::indicesByteSize = sizeof(uint32_t) * indices.size();
+    VkBuffer       vertStageBuff, indexStageBuff;
+    VkDeviceMemory vertStageMem, indexStageMem;
+
+    // Vertex buffer
+    {
+
+        vlknh::BufferCreateInfo buffInfo{};
+        buffInfo.physicalDevice = vlkn::physicalDevice;
+        buffInfo.size = verticesByteSize;
+        buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        buffInfo.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+        vlknh::createBuffer(vlkn::device, buffInfo, &vertStageBuff, &vertStageMem);
+        vlknh::loadBuffer(vlkn::device, vertStageMem, vertices.data(), verticesByteSize);
+
+        buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        buffInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        vlknh::createBuffer(vlkn::device, buffInfo, &vlkn::vp::vertBuff, &vlkn::vp::vertBuffMem);
+
+    }
+
+    // Indexbuffer
+    {
+
+        vlknh::BufferCreateInfo buffInfo{};
+        buffInfo.physicalDevice = vlkn::physicalDevice;
+        buffInfo.size = vlkn::vp::indicesByteSize;
+        buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        buffInfo.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+        vlknh::createBuffer(vlkn::device, buffInfo, &indexStageBuff, &indexStageMem);
+        vlknh::loadBuffer(vlkn::device, indexStageMem, indices.data(), vlkn::vp::indicesByteSize);
+
+        buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        buffInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        vlknh::createBuffer(vlkn::device, buffInfo, &vlkn::vp::indexBuff, &vlkn::vp::indexBuffMem);
+
+    }
+
+    vlknh::SingleTimeCommandBuffer cmdBuff(vlkn::device, vlkn::commandPool);
+    cmdBuff.begin();
+    cmdBuff.copy(verticesByteSize, vertStageBuff, vlkn::vp::vertBuff);
+    cmdBuff.copy(vlkn::vp::indicesByteSize, indexStageBuff, vlkn::vp::indexBuff);
+    cmdBuff.submit(vlkn::graphicsQueue);
+
+    vkQueueWaitIdle(vlkn::graphicsQueue);
+
+    vkFreeMemory(vlkn::device, vertStageMem, nullptr);
+    vkDestroyBuffer(vlkn::device, vertStageBuff, nullptr);
+    vkFreeMemory(vlkn::device, indexStageMem, nullptr);
+    vkDestroyBuffer(vlkn::device, indexStageBuff, nullptr);
+
+}
+
+static void openModelDialog() {
+
+    char fileName[MAX_PATH]{};
+
+    OPENFILENAMEA ofn{};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = win::hwnd;
+    ofn.lpstrFile = fileName;
+    ofn.lpstrFile[0] = '\0';
+    ofn.nMaxFile = sizeof(fileName);
+    ofn.lpstrFilter = "STL files\0*.stl\0";
+    ofn.nFilterIndex = 1;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;
+
+    if (GetOpenFileNameA(&ofn) != TRUE) return;
+
+    vkQueueWaitIdle(vlkn::graphicsQueue);
+
+    vkFreeMemory(vlkn::device, vlkn::vp::vertBuffMem, nullptr);
+    vkDestroyBuffer(vlkn::device, vlkn::vp::vertBuff, nullptr);
+    vkFreeMemory(vlkn::device, vlkn::vp::indexBuffMem, nullptr);
+    vkDestroyBuffer(vlkn::device, vlkn::vp::indexBuff, nullptr);
+
+    createBuffersFromFile(fileName, &vlkn::vp::largestVert);
 
 }
 
@@ -619,8 +728,6 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
 
     }
 
-    {} // Fixes visual studio bug with collapsing scopes
-
     // Command buffer creation
     {
 
@@ -707,84 +814,43 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
         io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/arial.ttf", s_gui.fontSize);
         io.Fonts->Build();
 
+        // Gui Style
+        {
+
+            // sizes
+            ImGuiStyle& style = ImGui::GetStyle(); 
+
+            style.FramePadding         = ImVec2(20, 4);
+            style.ItemInnerSpacing     = ImVec2(6, 6);
+            style.TabBarBorderSize     = 2; 
+            style.TabBarOverlineSize   = 0; 
+            style.TabRounding          = 12;
+            style.WindowTitleAlign     = ImVec2(0.5, 0.5);
+            style.DockingSeparatorSize = 2;
+            style.TabBorderSize        = 0; 
+
+            style.Colors[ImGuiCol_MenuBarBg]         = c_style::col1;
+            style.Colors[ImGuiCol_TitleBg]           = c_style::col1;
+            style.Colors[ImGuiCol_TitleBgActive]     = c_style::col1;
+
+            style.Colors[ImGuiCol_Header]            = c_style::col3; 
+            style.Colors[ImGuiCol_HeaderHovered]     = ImGui::rgba32toVec4(60, 60, 60, 255);
+
+            style.Colors[ImGuiCol_Tab]               = c_style::col3;
+            //style.Colors[ImGuiCol_TabSelected]       = c_style::activeCol;
+            style.Colors[ImGuiCol_TabHovered]        = c_style::hoverCol;
+            style.Colors[ImGuiCol_TabSelected]         = c_style::activeCol;
+            style.Colors[ImGuiCol_TabDimmed]         = c_style::col3;
+            style.Colors[ImGuiCol_TabDimmedSelected] = c_style::col3;
+
+            style.Colors[ImGuiCol_DockingPreview]    = c_style::hoverCol;
+
+        }
+
     }
 
     // viewport (NOT imgui viewport as in a separate window). This is where the 3D model is drawn.
     {
-
-        // Image creation
-        {
-
-            VkImageCreateInfo imageInfo{};
-            imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-            imageInfo.flags = 0;
-            imageInfo.imageType = VK_IMAGE_TYPE_2D;
-            imageInfo.format = c_vlkn::format;
-            imageInfo.extent = { c_vlkn::vpWidth, c_vlkn::vpHeight, 1 };
-            imageInfo.mipLevels = 1;
-            imageInfo.arrayLayers = 1;
-            imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-            imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-            imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-            imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            imageInfo.queueFamilyIndexCount = 1;
-            imageInfo.pQueueFamilyIndices = &vlkn::graphicsQueueIndex;
-            imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-            VkResult err = vkCreateImage(vlkn::device, &imageInfo, nullptr, &vlkn::vp::image);
-
-        }
-
-        // Image memory creation
-        {
-
-            VkMemoryRequirements memRequirements;
-            vkGetImageMemoryRequirements(vlkn::device, vlkn::vp::image, &memRequirements);
-            VkPhysicalDeviceMemoryProperties memProps;
-            vkGetPhysicalDeviceMemoryProperties(vlkn::physicalDevice, &memProps);
-
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize = memRequirements.size;
-
-            uint32_t i = 0;
-            for (; i < memProps.memoryTypeCount; i++) {
-                if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-                    break;
-                }
-            }
-
-            allocInfo.memoryTypeIndex = i;
-            VkResult err = vkAllocateMemory(vlkn::device, &allocInfo, nullptr, &vlkn::vp::imageMem);
-            assert(err == VK_SUCCESS && "Buffer allocation failed");
-
-            vkBindImageMemory(vlkn::device, vlkn::vp::image, vlkn::vp::imageMem, 0);
-
-        }
-
-        // Image view creation
-        {
-
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.flags = 0;
-            createInfo.image = vlkn::vp::image;
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = c_vlkn::format;
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
-
-            VkResult err = vkCreateImageView(vlkn::device, &createInfo, nullptr, &vlkn::vp::imageView);
-            assert(err == VK_SUCCESS && "Image view creation failed");
-
-        }
 
         // Render Pass Creation
         {
@@ -804,22 +870,36 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
             colorAttachmentRef.attachment = 0;
             colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+            VkAttachmentDescription depthAttachment{};
+            depthAttachment.format  = c_vlkn::depthFormat; 
+            depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            depthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+            depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; 
+
+            VkAttachmentReference depthAttachmentRef{};
+            depthAttachmentRef.attachment = 1;
+            depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
             VkSubpassDescription subpass{};
             subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass.colorAttachmentCount = 1;
-            subpass.pColorAttachments = &colorAttachmentRef;
-            subpass.pDepthStencilAttachment = nullptr;
-            subpass.pResolveAttachments = nullptr;
+            subpass.colorAttachmentCount     = 1;
+            subpass.pColorAttachments       = &colorAttachmentRef;
+            subpass.pDepthStencilAttachment = &depthAttachmentRef;
+            subpass.pResolveAttachments     = nullptr;
 
             VkSubpassDependency dependency{};
             dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
             dependency.dstSubpass = 0;
-            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
             dependency.srcAccessMask = 0;
-            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT         | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-            VkAttachmentDescription attachments[] = { colorAttachment };
+            VkAttachmentDescription attachments[] = { colorAttachment, depthAttachment };
             VkRenderPassCreateInfo renderPassInfo{};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
             renderPassInfo.flags = 0;
@@ -832,25 +912,6 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
 
             VkResult err = vkCreateRenderPass(vlkn::device, &renderPassInfo, nullptr, &vlkn::vp::renderPass);
             assert(err == VK_SUCCESS && "Render pass creation failed");
-
-        }
-
-        // Framebuffer creation
-        {
-
-            VkImageView attachments[] = { vlkn::vp::imageView };
-
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = vlkn::vp::renderPass;
-            framebufferInfo.attachmentCount = arraySize(attachments);
-            framebufferInfo.pAttachments = attachments;
-            framebufferInfo.width = c_vlkn::vpWidth;
-            framebufferInfo.height = c_vlkn::vpHeight;
-            framebufferInfo.layers = 1;
-
-            VkResult err = vkCreateFramebuffer(vlkn::device, &framebufferInfo, nullptr, &vlkn::vp::framebuffer);
-            assert(err == VK_SUCCESS && "Frambuffer creation failed");
 
         }
 
@@ -875,14 +936,19 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
 
             VkVertexInputBindingDescription bindingDescription{};
             bindingDescription.binding = 0;
-            bindingDescription.stride = sizeof(Vertex);
+            bindingDescription.stride = sizeof(mload::Vertex);
             bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-            VkVertexInputAttributeDescription attribDescriptions[1]{};
-            attribDescriptions[0].binding = 0;
+            VkVertexInputAttributeDescription attribDescriptions[2]{};
+            attribDescriptions[0].binding  = 0;
             attribDescriptions[0].location = 0;
-            attribDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-            attribDescriptions[0].offset = offsetof(Vertex, pos);
+            attribDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
+            attribDescriptions[0].offset   = offsetof(mload::Vertex, pos);
+
+            attribDescriptions[1].binding  = 0;
+            attribDescriptions[1].location = 1;
+            attribDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+            attribDescriptions[1].offset   = offsetof(mload::Vertex, normal);
 
             VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
             vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -916,6 +982,16 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
             multisampling.sampleShadingEnable = VK_FALSE;
             multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+            VkPipelineDepthStencilStateCreateInfo depthStencil{};
+            depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO; 
+            depthStencil.depthTestEnable       = VK_TRUE;
+            depthStencil.depthWriteEnable      = VK_TRUE;
+            depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+            depthStencil.depthBoundsTestEnable = VK_FALSE;
+            depthStencil.minDepthBounds        = 0.0f;
+            depthStencil.maxDepthBounds        = 1.0f;
+            depthStencil.stencilTestEnable     = VK_FALSE;
+
             VkPipelineColorBlendAttachmentState colorBlendAttachment{};
             colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
             colorBlendAttachment.blendEnable = VK_FALSE;
@@ -933,10 +1009,17 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
             dynamicState.dynamicStateCount = arraySize(dynamicStates);
             dynamicState.pDynamicStates = dynamicStates;
 
+            VkPushConstantRange pcRange{};
+            pcRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+            pcRange.offset     = 0;
+            pcRange.size       = sizeof(PushConstants); 
+
             VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
             pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            pipelineLayoutInfo.setLayoutCount = 0;
-            pipelineLayoutInfo.pushConstantRangeCount = 0;
+            pipelineLayoutInfo.flags                  = 0; 
+            pipelineLayoutInfo.setLayoutCount         = 0;
+            pipelineLayoutInfo.pushConstantRangeCount = 1;
+            pipelineLayoutInfo.pPushConstantRanges    = &pcRange;
 
             VkResult err = vkCreatePipelineLayout(vlkn::device, &pipelineLayoutInfo, nullptr, &vlkn::vp::pipelineLayout);
             assert(err == VK_SUCCESS && "Failed to create pipeline layout");
@@ -952,7 +1035,7 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
             pipelineInfo.pViewportState = &viewportState;
             pipelineInfo.pRasterizationState = &rasterizer;
             pipelineInfo.pMultisampleState = &multisampling;
-            pipelineInfo.pDepthStencilState = nullptr;
+            pipelineInfo.pDepthStencilState = &depthStencil;
             pipelineInfo.pColorBlendState = &colorBlending;
             pipelineInfo.pDynamicState = &dynamicState;
             pipelineInfo.layout = vlkn::vp::pipelineLayout;
@@ -967,38 +1050,8 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
             vkDestroyShaderModule(vlkn::device, fragModule, nullptr);
 
         }
-        {} // Fixes visual studio bug with collapsing scopes
 
-        // Vertex buffer
-        {
-
-            VkBuffer       vertStageBuff;
-            VkDeviceMemory vertStageMem;
-
-            vlknh::BufferCreateInfo buffInfo{};
-            buffInfo.physicalDevice = vlkn::physicalDevice;
-            buffInfo.size = sizeof(vertices);
-            buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-            buffInfo.properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-            vlknh::createBuffer(vlkn::device, buffInfo, &vertStageBuff, &vertStageMem);
-            vlknh::loadBuffer(vlkn::device, vertStageMem, vertices, sizeof(vertices));
-
-            buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-            buffInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-            vlknh::createBuffer(vlkn::device, buffInfo, &vlkn::vp::vertBuff, &vlkn::vp::vertBuffMem);
-
-            vlknh::SingleTimeCommandBuffer cmdBuff(vlkn::device, vlkn::commandPool);
-            cmdBuff.begin();
-            cmdBuff.copy(sizeof(vertices), vertStageBuff, vlkn::vp::vertBuff);
-            cmdBuff.submit(vlkn::graphicsQueue);
-
-            vkQueueWaitIdle(vlkn::graphicsQueue);
-
-            vkFreeMemory(vlkn::device, vertStageMem, nullptr);
-            vkDestroyBuffer(vlkn::device, vertStageBuff, nullptr);
-
-        }
+        createBuffersFromFile("res/meshes/Cube(Binary).stl", &vlkn::vp::largestVert);
 
         // Texture sampler creation 
         {
@@ -1027,19 +1080,48 @@ void App::init(HINSTANCE hInstance, int nCmdShow) {
 
         }
 
-        // framebuffer image -> imgui     
-        vlkn::vp::framebufferTexID = ImGui_ImplVulkan_AddTexture(vlkn::vp::frameSampler, vlkn::vp::imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        // Texture descriptor set creation
+        {
+
+            VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+            samplerLayoutBinding.binding            = 0; 
+            samplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            samplerLayoutBinding.descriptorCount    = 1; 
+            samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+            samplerLayoutBinding.pImmutableSamplers = nullptr;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{}; 
+            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.flags = 0; 
+            layoutInfo.bindingCount = 1; 
+            layoutInfo.pBindings    = &samplerLayoutBinding;
+
+            vkCreateDescriptorSetLayout(vlkn::device, &layoutInfo, nullptr, &vlkn::vp::descriptorSetLayout); 
+
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool     = vlkn::descriptorPool; 
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts        = &vlkn::vp::descriptorSetLayout;
+
+            vkAllocateDescriptorSets(vlkn::device, &allocInfo, &vlkn::vp::descriptorSet);  
+
+        }
 
     }
 
     // All init code goes above this function. 
     ShowWindow(win::hwnd, nCmdShow);
-
+     
 }
 
 static double      frameWaitTime = 0.0; 
 constexpr uint32_t sampleCount = 200; 
 static float       frameWaitTimesGraph[sampleCount]{}; 
+uint32_t           resizeCount = 0;
+glm::vec2          orbitAngle(0.0f, 0.0f);
+bool               orbitActive = false; 
+
 void App::render() {
     
     if (win::windowMinimized) { sleepFor(0.005); return; }
@@ -1059,6 +1141,8 @@ void App::render() {
     bool restoreWindow  = false; 
     bool closeWindow    = false; 
 
+    ImVec2 viewportSize    = vlkn::vp::prevFramebufferSize;; 
+
     // My GUI
     {
         // Main dockspace
@@ -1074,21 +1158,28 @@ void App::render() {
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             float titleBarPadding = 0.5f * (s_gui.titleBarHeight - s_gui.fontSize);
+            ImVec2 prevFramePadding = ImGui::GetStyle().FramePadding;
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,  ImVec2(0.0f, titleBarPadding));
             ImGui::Begin("Simple Viewer 3D", nullptr, windowFlags);
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 3.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, prevFramePadding);
             ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
             ImGui::DockSpace(dockspace_id);
 
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, titleBarPadding));
+            bool openShortcut = (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) && win::openFileShortcut;
+            if (openShortcut) {
+                openModelDialog();
+                win::openFileShortcut = false;
+            }
             if (ImGui::BeginMenuBar())
             {
                 ImGui::SetCursorPosX(s_gui.menuBarStartExtent);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
                 if (ImGui::BeginMenu("File")) {
-                    ImGui::MenuItem("Open");
-                    ImGui::MenuItem("Save");
+                    if (ImGui::MenuItem("Open", "Ctrl + O")) openModelDialog(); 
                     ImGui::EndMenu();
                 }
+                ImGui::PopStyleVar();
                 ImGui::SetCursorPosX(0.465f * viewport->Size.x);
                 ImGui::Text("Simple Viewer 3D");
 
@@ -1160,25 +1251,251 @@ void App::render() {
 
         ImGui::SetNextWindowSize({ 600, 600 }, ImGuiCond_FirstUseEver);
 
+        ImGuiIO& io = ImGui::GetIO(); 
         if (ImGui::Begin("App Data")) {
-            ImGui::Text("Framerate: %f", ImGui::GetIO().Framerate);
+            ImGui::Text("Framerate: %f", io.Framerate);
             float (*func)(void*, int) = [](void* data, int i) { return frameWaitTimesGraph[i]; };
             constexpr float scale = 0.020;
             ImGui::PlotLines("Frame Time Error", func, nullptr, sampleCount, 0, nullptr, -scale, scale, ImVec2(0, 200));
             ImGui::Text("Scale: %.3fms", scale * 1000);
+            ImGui::Text("Viewport resizes: %u", resizeCount);
         }
         ImGui::End();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         if (ImGui::Begin("Viewport")) {
 
-            ImGui::Image(vlkn::vp::framebufferTexID, ImGui::GetContentRegionAvail());
+            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_None) && ImGui::IsMouseDown(ImGuiMouseButton_Left)) orbitActive = true;
+            if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) orbitActive = false;
+            if (orbitActive) {
+                orbitAngle  += glm::vec2(-0.003 * io.MouseDelta.y, 0.003 * io.MouseDelta.x); 
+                orbitAngle.x = glm::clamp(orbitAngle.x, glm::radians(-90.0f), glm::radians(90.0f));
+            }
+            viewportSize = ImGui::GetContentRegionAvail();
+            ImGui::Image(vlkn::vp::framebufferTexID, viewportSize);
 
         }
         ImGui::End();
         ImGui::PopStyleVar();
 
     }
+    {} // Fixes visual studio bug with collapsing scopes
+    
+    // viewport resize
+    VkExtent2D viewportExtent = { (uint32_t)viewportSize.x, (uint32_t)viewportSize.y };
+    if (viewportSize != vlkn::vp::prevFramebufferSize) {
+        ++resizeCount;
+        vlkn::vp::prevFramebufferSize = viewportSize;
+
+        vkDeviceWaitIdle(vlkn::device);
+
+        // Don't run if this is the first time creating the viewport resources
+        if (vlkn::vp::framebuffer != VK_NULL_HANDLE) {
+
+            vkDestroyFramebuffer(vlkn::device, vlkn::vp::framebuffer, nullptr);
+            vkDestroyImageView(vlkn::device, vlkn::vp::depthImageView, nullptr);
+            vkFreeMemory(vlkn::device, vlkn::vp::depthImageMem, nullptr);
+            vkDestroyImage(vlkn::device, vlkn::vp::depthImage, nullptr);
+            vkDestroyImageView(vlkn::device, vlkn::vp::imageView, nullptr);
+            vkFreeMemory(vlkn::device, vlkn::vp::imageMem, nullptr);
+            vkDestroyImage(vlkn::device, vlkn::vp::image, nullptr);
+
+        }
+
+        // Image creation
+        {
+
+            VkImageCreateInfo imageInfo{};
+            imageInfo.sType       = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            imageInfo.flags       = 0;
+            imageInfo.imageType   = VK_IMAGE_TYPE_2D;
+            imageInfo.format      = c_vlkn::format;
+            imageInfo.extent      = { viewportExtent.width, viewportExtent.height, 1 };
+            imageInfo.mipLevels   = 1;
+            imageInfo.arrayLayers = 1;
+            imageInfo.samples     = VK_SAMPLE_COUNT_1_BIT;
+            imageInfo.tiling      = VK_IMAGE_TILING_OPTIMAL;
+            imageInfo.usage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            imageInfo.queueFamilyIndexCount = 1;
+            imageInfo.pQueueFamilyIndices   = &vlkn::graphicsQueueIndex;
+            imageInfo.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
+
+            VkResult err = vkCreateImage(vlkn::device, &imageInfo, nullptr, &vlkn::vp::image);
+            assert(err == VK_SUCCESS && "Image creation failed");
+
+        }
+
+        // Image memory creation
+        {
+
+            VkMemoryRequirements memRequirements;
+            vkGetImageMemoryRequirements(vlkn::device, vlkn::vp::image, &memRequirements);
+            VkPhysicalDeviceMemoryProperties memProps;
+            vkGetPhysicalDeviceMemoryProperties(vlkn::physicalDevice, &memProps);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+
+            uint32_t i = 0;
+            for (; i < memProps.memoryTypeCount; i++) {
+                if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                    break;
+                }
+            }
+
+            allocInfo.memoryTypeIndex = i;
+            VkResult err = vkAllocateMemory(vlkn::device, &allocInfo, nullptr, &vlkn::vp::imageMem);
+            assert(err == VK_SUCCESS && "Buffer allocation failed");
+
+            vkBindImageMemory(vlkn::device, vlkn::vp::image, vlkn::vp::imageMem, 0);
+
+        }
+
+        // Image view creation
+        {
+
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.flags    = 0;
+            createInfo.image    = vlkn::vp::image;
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format   = c_vlkn::format;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
+
+            VkResult err = vkCreateImageView(vlkn::device, &createInfo, nullptr, &vlkn::vp::imageView);
+            assert(err == VK_SUCCESS && "Image view creation failed");
+
+        }
+
+        // Depth image creation
+        {
+
+            VkImageCreateInfo imageInfo{};
+            imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            imageInfo.flags       = 0;
+            imageInfo.imageType   = VK_IMAGE_TYPE_2D;
+            imageInfo.format      = c_vlkn::depthFormat;
+            imageInfo.extent      = { viewportExtent.width, viewportExtent.height, 1 };
+            imageInfo.mipLevels   = 1;
+            imageInfo.arrayLayers = 1;
+            imageInfo.samples     = VK_SAMPLE_COUNT_1_BIT;
+            imageInfo.tiling      = VK_IMAGE_TILING_OPTIMAL;
+            imageInfo.usage       = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            imageInfo.queueFamilyIndexCount = 1;
+            imageInfo.pQueueFamilyIndices   = &vlkn::graphicsQueueIndex;
+            imageInfo.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
+
+            VkResult err = vkCreateImage(vlkn::device, &imageInfo, nullptr, &vlkn::vp::depthImage);
+            assert(err == VK_SUCCESS && "Depth image creation failed");
+
+        }
+
+        // Image memory creation
+        {
+
+            VkMemoryRequirements memRequirements;
+            vkGetImageMemoryRequirements(vlkn::device, vlkn::vp::depthImage, &memRequirements);
+            VkPhysicalDeviceMemoryProperties memProps;
+            vkGetPhysicalDeviceMemoryProperties(vlkn::physicalDevice, &memProps);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+
+            uint32_t i = 0;
+            for (; i < memProps.memoryTypeCount; i++) {
+                if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                    break;
+                }
+            }
+
+            allocInfo.memoryTypeIndex = i;
+            VkResult err = vkAllocateMemory(vlkn::device, &allocInfo, nullptr, &vlkn::vp::depthImageMem);
+            assert(err == VK_SUCCESS && "Buffer allocation failed");
+
+            vkBindImageMemory(vlkn::device, vlkn::vp::depthImage, vlkn::vp::depthImageMem, 0);
+
+        }
+
+        // Depth image view creation
+        {
+
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.flags    = 0;
+            createInfo.image    = vlkn::vp::depthImage;
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format   = c_vlkn::depthFormat;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
+            createInfo.subresourceRange.baseMipLevel   = 0;
+            createInfo.subresourceRange.levelCount     = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount     = 1;
+
+            VkResult err = vkCreateImageView(vlkn::device, &createInfo, nullptr, &vlkn::vp::depthImageView);
+            assert(err == VK_SUCCESS && "Depth image view creation failed");
+
+        }
+
+        // Update Descriptor Set
+        {
+
+            VkDescriptorImageInfo imageInfo{}; 
+            imageInfo.sampler     = vlkn::vp::frameSampler; 
+            imageInfo.imageView   = vlkn::vp::imageView;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            VkWriteDescriptorSet writeDescriptor{};
+            writeDescriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writeDescriptor.dstSet          = vlkn::vp::descriptorSet; 
+            writeDescriptor.dstBinding      = 0; 
+            writeDescriptor.dstArrayElement = 0;
+            writeDescriptor.descriptorCount = 1;
+            writeDescriptor.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; 
+            writeDescriptor.pImageInfo      = &imageInfo;
+            
+            vkUpdateDescriptorSets(vlkn::device, 1, &writeDescriptor, 0, nullptr);
+
+            vlkn::vp::framebufferTexID = (ImTextureID)vlkn::vp::descriptorSet;
+
+        }
+
+        // Framebuffer creation
+        {
+
+            VkImageView attachments[] = { vlkn::vp::imageView, vlkn::vp::depthImageView };
+
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass      = vlkn::vp::renderPass;
+            framebufferInfo.attachmentCount = arraySize(attachments);
+            framebufferInfo.pAttachments    = attachments;
+            framebufferInfo.width           = viewportExtent.width;
+            framebufferInfo.height          = viewportExtent.height;
+            framebufferInfo.layers          = 1;
+
+            VkResult err = vkCreateFramebuffer(vlkn::device, &framebufferInfo, nullptr, &vlkn::vp::framebuffer);
+            assert(err == VK_SUCCESS && "Frambuffer creation failed");
+
+        }
+
+    }
+
     {} // Fixes visual studio bug with collapsing scopes
 
     // Rendering
@@ -1202,40 +1519,51 @@ void App::render() {
         renderPassInfo.renderPass = vlkn::vp::renderPass;
         renderPassInfo.framebuffer = vlkn::vp::framebuffer;
         renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent.width  = c_vlkn::vpWidth;
-        renderPassInfo.renderArea.extent.height = c_vlkn::vpHeight;
+        renderPassInfo.renderArea.extent = viewportExtent;
 
-        VkClearValue clearValues{};
-        clearValues.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+        VkClearValue clearValues[2]{};
+        clearValues[0].color = {{18 / 255.0, 18 / 255.0, 18 / 255.0, 1.0f}};
+        clearValues[1].depthStencil = { 1.0f, 0 };
 
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearValues;
+        renderPassInfo.clearValueCount = arraySize(clearValues);
+        renderPassInfo.pClearValues    = clearValues;
 
-        vkCmdBeginRenderPass(vlkn::commandBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        // Viewport render pass
+        {
 
-        vkCmdBindPipeline(vlkn::commandBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, vlkn::vp::graphicsPipeline); 
+            vkCmdBeginRenderPass(vlkn::commandBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        VkViewport viewport{};
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width  = c_vlkn::vpWidth;
-        viewport.height = c_vlkn::vpHeight;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(vlkn::commandBuff, 0, 1, &viewport);
+            vkCmdBindPipeline(vlkn::commandBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, vlkn::vp::graphicsPipeline); 
 
-        VkRect2D scissor{};
-        scissor.offset = { 0, 0 };
-        scissor.extent.width  = c_vlkn::vpWidth;
-        scissor.extent.height = c_vlkn::vpHeight;
-        vkCmdSetScissor(vlkn::commandBuff, 0, 1, &scissor);
+            VkViewport viewport{};
+            viewport.x = 0.0f;
+            viewport.y = 0.0f;
+            viewport.width  = viewportSize.x;
+            viewport.height = viewportSize.y;
+            viewport.minDepth = 0.0f;
+            viewport.maxDepth = 1.0f;
+            vkCmdSetViewport(vlkn::commandBuff, 0, 1, &viewport);
 
-        VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(vlkn::commandBuff, 0, 1, &vlkn::vp::vertBuff, offsets);
+            VkRect2D scissor{};
+            scissor.offset = { 0, 0 };
+            scissor.extent = viewportExtent;
+            vkCmdSetScissor(vlkn::commandBuff, 0, 1, &scissor);
 
-        vkCmdDraw(vlkn::commandBuff, 3, 1, 0, 0);
+            VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers(vlkn::commandBuff, 0, 1, &vlkn::vp::vertBuff, offsets);
+            vkCmdBindIndexBuffer(vlkn::commandBuff, vlkn::vp::indexBuff, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdEndRenderPass(vlkn::commandBuff);
+            PushConstants pushConstants;
+            pushConstants.model = glm::eulerAngleXY(orbitAngle.x, orbitAngle.y);
+            pushConstants.view  = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f * vlkn::vp::largestVert));
+            pushConstants.proj  = glm::perspective(glm::radians(45.0f), viewportSize.x / viewportSize.y, 0.1f, 10.0f * vlkn::vp::largestVert);
+            vkCmdPushConstants(vlkn::commandBuff, vlkn::vp::pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
+
+            vkCmdDrawIndexed(vlkn::commandBuff, (uint32_t)vlkn::vp::indicesByteSize / sizeof(uint32_t), 1, 0, 0, 0);
+
+            vkCmdEndRenderPass(vlkn::commandBuff);
+
+        }
 
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = vlkn::renderPass;
@@ -1243,53 +1571,56 @@ void App::render() {
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = vlkn::windowImageExtent;
 
-        clearValues.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-
         renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearValues;
+        renderPassInfo.pClearValues    = clearValues;
+        
+        // Main render pass
+        {
 
-        vkCmdBeginRenderPass(vlkn::commandBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(vlkn::commandBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        ImGui::Render();
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vlkn::commandBuff);
+            ImGui::Render();
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vlkn::commandBuff);
 
-        vkCmdEndRenderPass(vlkn::commandBuff);
+            vkCmdEndRenderPass(vlkn::commandBuff);
 
-        err = vkEndCommandBuffer(vlkn::commandBuff);
-        assert(err == VK_SUCCESS && "Command buffer end failed");
+            err = vkEndCommandBuffer(vlkn::commandBuff);
+            assert(err == VK_SUCCESS && "Command buffer end failed");
 
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &vlkn::imageReadySemaphore;
-        submitInfo.pWaitDstStageMask = waitStages;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &vlkn::commandBuff;
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &vlkn::renderDoneSemaphore;
+            VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = &vlkn::imageReadySemaphore;
+            submitInfo.pWaitDstStageMask = waitStages;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &vlkn::commandBuff;
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &vlkn::renderDoneSemaphore;
 
-        err = vkQueueSubmit(vlkn::graphicsQueue, 1, &submitInfo, vlkn::frameFinishedFence);
-        assert(err == VK_SUCCESS && "Queue submit failed");
+            err = vkQueueSubmit(vlkn::graphicsQueue, 1, &submitInfo, vlkn::frameFinishedFence);
+            assert(err == VK_SUCCESS && "Queue submit failed");
 
-        VkPresentInfoKHR presentInfo{};
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &vlkn::renderDoneSemaphore;
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = &vlkn::swapchain;
-        presentInfo.pImageIndices = &imageIndex;
+            VkPresentInfoKHR presentInfo{};
+            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+            presentInfo.waitSemaphoreCount = 1;
+            presentInfo.pWaitSemaphores = &vlkn::renderDoneSemaphore;
+            presentInfo.swapchainCount = 1;
+            presentInfo.pSwapchains = &vlkn::swapchain;
+            presentInfo.pImageIndices = &imageIndex;
 
-        err = vkQueuePresentKHR(vlkn::presentQueue, &presentInfo);
-        assert(err == VK_SUCCESS && "Presenting failed");
+            err = vkQueuePresentKHR(vlkn::presentQueue, &presentInfo);
+            assert(err == VK_SUCCESS && "Presenting failed");
+
+        }
 
         for (float* value = frameWaitTimesGraph; value < frameWaitTimesGraph + sampleCount - 1; ++value)
             value[0] = value[1];
 
         double timeError = win::refreshInterval - ImGui::GetIO().DeltaTime;
         frameWaitTimesGraph[sampleCount - 1] = (float)timeError;
-        frameWaitTime += 0.2 * timeError;
+        frameWaitTime += 0.5 * timeError;
 
         sleepFor(frameWaitTime);
 
@@ -1317,13 +1648,19 @@ void App::close() {
      // Viewport cleanup
     {
 
+        vkDestroyDescriptorSetLayout(vlkn::device, vlkn::vp::descriptorSetLayout, nullptr);
         vkDestroySampler(vlkn::device, vlkn::vp::frameSampler, nullptr);
         vkFreeMemory(vlkn::device, vlkn::vp::vertBuffMem, nullptr);
         vkDestroyBuffer(vlkn::device, vlkn::vp::vertBuff, nullptr);
+        vkFreeMemory(vlkn::device, vlkn::vp::indexBuffMem, nullptr);
+        vkDestroyBuffer(vlkn::device, vlkn::vp::indexBuff, nullptr);
         vkDestroyPipeline(vlkn::device, vlkn::vp::graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(vlkn::device, vlkn::vp::pipelineLayout, nullptr);
         vkDestroyFramebuffer(vlkn::device, vlkn::vp::framebuffer, nullptr);
         vkDestroyRenderPass(vlkn::device, vlkn::vp::renderPass, nullptr);
+        vkDestroyImageView(vlkn::device, vlkn::vp::depthImageView, nullptr);
+        vkFreeMemory(vlkn::device, vlkn::vp::depthImageMem, nullptr);
+        vkDestroyImage(vlkn::device, vlkn::vp::depthImage, nullptr);
         vkDestroyImageView(vlkn::device, vlkn::vp::imageView, nullptr);
         vkFreeMemory(vlkn::device, vlkn::vp::imageMem, nullptr);
         vkDestroyImage(vlkn::device, vlkn::vp::image, nullptr);
@@ -1352,4 +1689,4 @@ void App::close() {
 #endif 
     vkDestroyInstance(vlkn::instance, nullptr);
 
-} 
+}

@@ -1,4 +1,4 @@
-#pragma once
+ #pragma once
 
 #include <Windows.h>
 
@@ -9,8 +9,8 @@ struct GuiSizes {
 	float fontSize           = 16.0;
 	float titleBarHeight     = 28.0;
 	float wndBtnWidth        = 40.0f;
-	float menuBarStartExtent = 20.0f;
-
+	float menuBarStartExtent = 12.0f;
+	float menuBarEndExtent   = 44.0f; 
 };
 extern GuiSizes s_gui;
 

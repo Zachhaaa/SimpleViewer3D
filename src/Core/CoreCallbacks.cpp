@@ -18,6 +18,7 @@ namespace win {
     extern int   windowHeight;
     extern bool  windowMinimized;
     extern float windowDpi;
+    extern bool  openFileShortcut;
 
 }
 
@@ -39,7 +40,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         RECT windowRect;
         GetClientRect(hwnd, &windowRect);
         // Check if the cursor is in a corner or edge for resizing
-        if (mpos.y < s_gui.titleBarHeight && mpos.y >= borderWidth && mpos.x > 50 && mpos.x < windowRect.right - 3 * s_gui.wndBtnWidth ) {
+        if (mpos.y < s_gui.titleBarHeight && mpos.y >= borderWidth && mpos.x > s_gui.menuBarEndExtent && mpos.x < windowRect.right - 3 * s_gui.wndBtnWidth ) {
             return HTCAPTION;
         }
         else if (mpos.y < borderWidth && mpos.x < borderWidth) {
@@ -99,6 +100,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     }
     case WM_KEYDOWN: {
         if (wParam == VK_ESCAPE) PostQuitMessage(0);
+        if (wParam == 'O') win::openFileShortcut = true; 
         return 0;
     }
     case WM_GETMINMAXINFO: {

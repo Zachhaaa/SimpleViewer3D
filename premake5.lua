@@ -14,7 +14,8 @@ project "SimpleViewer3Dapp"
         "Dependencies/glm",
         "Dependencies/imgui/backends",
         "Dependencies/imgui",
-        "Dependencies/TimerApi"
+        "Dependencies/TimerApi",
+        "Dependencies/ModelLoader"
     }
 
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
@@ -33,7 +34,9 @@ project "SimpleViewer3Dapp"
         "Dependencies/imgui/backends/imgui_impl_win32.cpp",
         "Dependencies/imgui/backends/imgui_impl_win32.h",
         "Dependencies/TimerApi/*.cpp",
-        "Dependencies/TimerApi/*.hpp"
+        "Dependencies/TimerApi/*.hpp",
+        "Dependencies/ModelLoader/*.cpp",
+        "Dependencies/ModelLoader/*.hpp"
     }
 
     defines     { "_CRT_SECURE_NO_WARNINGS" }
