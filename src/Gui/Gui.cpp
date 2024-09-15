@@ -2,6 +2,24 @@
 
 #include <algorithm>
 
+namespace c_style {
+
+    /*
+    * Color are listed from the most used color to be color 1, and the
+    * highest number color to be the least use color of the theme.
+    * For example:
+    * col1 = background colors
+    * col2 = border colors
+    * col3 = hover colors
+    */
+    constexpr ImVec4 col1 = ImGui::rgba32toVec4(15, 15, 15, 255);
+    constexpr ImVec4 col2 = ImGui::rgba32toVec4(20, 20, 20, 255);
+    constexpr ImVec4 col3 = ImGui::rgba32toVec4(40, 40, 40, 255);
+    constexpr ImVec4 activeCol = ImGui::rgba32toVec4(69, 61, 40, 255);
+    constexpr ImVec4 hoverCol = ImGui::rgba32toVec4(113, 100, 65, 255);
+
+}
+
 void Gui::init(InitInfo* initInfo, GuiSizes* guiSizes, float guiDpi) {
 
     IMGUI_CHECKVERSION();
@@ -40,6 +58,38 @@ void Gui::init(InitInfo* initInfo, GuiSizes* guiSizes, float guiDpi) {
     io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/arial.ttf", guiSizes->fontSize);
     io.Fonts->Build();
 
+    // Gui Style
+    {
+
+        // sizes
+        ImGuiStyle& style = ImGui::GetStyle();
+
+        style.FramePadding = ImVec2(20, 4);
+        style.ItemInnerSpacing = ImVec2(6, 6);
+        style.TabBarBorderSize = 2;
+        style.TabBarOverlineSize = 0;
+        style.TabRounding = 12;
+        style.WindowTitleAlign = ImVec2(0.5, 0.5);
+        style.DockingSeparatorSize = 2;
+        style.TabBorderSize = 0;
+
+        style.Colors[ImGuiCol_MenuBarBg]     = c_style::col1;
+        style.Colors[ImGuiCol_TitleBg]       = c_style::col1;
+        style.Colors[ImGuiCol_TitleBgActive] = c_style::col1;
+
+        style.Colors[ImGuiCol_Header]        = c_style::col3;
+        style.Colors[ImGuiCol_HeaderHovered] = ImGui::rgba32toVec4(60, 60, 60, 255);
+
+        style.Colors[ImGuiCol_Tab]               = c_style::col3;
+        style.Colors[ImGuiCol_TabHovered]        = c_style::hoverCol;
+        style.Colors[ImGuiCol_TabSelected]       = c_style::activeCol;
+        style.Colors[ImGuiCol_TabDimmed]         = c_style::col3;
+        style.Colors[ImGuiCol_TabDimmedSelected] = c_style::col3;
+
+        style.Colors[ImGuiCol_DockingPreview] = c_style::hoverCol;
+
+    }
+
 }
 
 void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
@@ -76,7 +126,7 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
             ImGui::SetCursorPosX(data->guiSizes.menuBarStartExtent);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
             if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Open", "Ctrl + O")) *cmdListPtr++ = Gui::cmd_restoreWindow;
+                if (ImGui::MenuItem("Open", "Ctrl + O")) *cmdListPtr++ = Gui::cmd_openDialog;
                 ImGui::EndMenu();
             }
             ImGui::PopStyleVar();
@@ -164,7 +214,7 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
     ImGui::End();
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    if (ImGui::Begin("Viewport")) {
+    if (ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
 
         if (ImGui::IsWindowHovered(ImGuiHoveredFlags_None) && ImGui::IsMouseDown(ImGuiMouseButton_Left)) data->vpData.orbitActive = true;
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) data->vpData.orbitActive = false;
@@ -173,11 +223,15 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
             data->vpData.orbitAngle.x = glm::clamp(data->vpData.orbitAngle.x, glm::radians(-90.0f), glm::radians(90.0f));
         }
         ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
-        if (data->vpData.viewportSize != currentVpSize) { 
-            *cmdListPtr++ = Gui::cmd_resizeViewport; 
-            data->vpData.viewportSize = currentVpSize; 
+        if (currentVpSize.x > 0.0 && currentVpSize.y > 0.0) {
+        
+            if (data->vpData.viewportSize != currentVpSize) { 
+                *cmdListPtr++ = Gui::cmd_resizeViewport; 
+                data->vpData.viewportSize = currentVpSize; 
+            }
+            ImGui::Image(data->vpData.framebufferTexID, data->vpData.viewportSize);
+        
         }
-        ImGui::Image(data->vpData.framebufferTexID, data->vpData.viewportSize);
 
     }
     ImGui::End();

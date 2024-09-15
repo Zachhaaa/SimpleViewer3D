@@ -1108,21 +1108,22 @@ void App::render(Core::Instance* inst) {
         CORE_ASSERT(err == VK_SUCCESS && "Command Buffer begin failed");
 
         VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = inst->vpRend.renderPass;
-        renderPassInfo.framebuffer       = inst->vpRend.framebuffer;
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = viewportExtent;
-
         VkClearValue clearValues[2]{};
-        clearValues[0].color = {{18 / 255.0, 18 / 255.0, 18 / 255.0, 1.0f}};
-        clearValues[1].depthStencil = { 1.0f, 0 };
-
-        renderPassInfo.clearValueCount = arraySize(clearValues);
-        renderPassInfo.pClearValues    = clearValues;
 
         // Viewport render pass
-        {
+        if (viewportExtent.width > 0 && viewportExtent.height > 0) {
+
+            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.renderPass = inst->vpRend.renderPass;
+            renderPassInfo.framebuffer = inst->vpRend.framebuffer;
+            renderPassInfo.renderArea.offset = { 0, 0 };
+            renderPassInfo.renderArea.extent = viewportExtent;
+
+            clearValues[0].color = { {18 / 255.0, 18 / 255.0, 18 / 255.0, 1.0f} };
+            clearValues[1].depthStencil = { 1.0f, 0 };
+
+            renderPassInfo.clearValueCount = arraySize(clearValues);
+            renderPassInfo.pClearValues = clearValues;
 
             vkCmdBeginRenderPass(inst->rend.commandBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1158,17 +1159,18 @@ void App::render(Core::Instance* inst) {
 
         }
 
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = inst->rend.renderPass;
-        renderPassInfo.framebuffer       = inst->rend.framebuffers[imageIndex];
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = inst->rend.windowImageExtent;
-
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues    = clearValues;
-        
         // Main render pass
         {
+
+            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.renderPass = inst->rend.renderPass;
+            renderPassInfo.framebuffer = inst->rend.framebuffers[imageIndex];
+            renderPassInfo.renderArea.offset = { 0, 0 };
+            renderPassInfo.renderArea.extent = inst->rend.windowImageExtent;
+
+            renderPassInfo.clearValueCount = 1;
+            renderPassInfo.pClearValues = clearValues;
+
 
             vkCmdBeginRenderPass(inst->rend.commandBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
