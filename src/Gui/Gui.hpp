@@ -44,7 +44,6 @@ struct InitInfo {
 
 };
 
-// Move the following constants elsewhere
 struct GuiSizes {
 
 	float fontSize = 16.0;

@@ -12,7 +12,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
 
-// TODO move the following struct and static
 struct PushConstants {
     glm::mat4 model, view, proj; 
 };
@@ -668,9 +667,6 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
         }
 
-        // TODO: write vertexdata cube in c array. 
-        // BOOKMARK: fill this shit out.
-
         mload::Vertex cubeVertices[] = {
             
             // right
@@ -1147,11 +1143,13 @@ void App::render(Core::Instance* inst) {
             vkCmdBindVertexBuffers(inst->rend.commandBuff, 0, 1, &inst->vpRend.vertBuff, offsets);
             vkCmdBindIndexBuffer  (inst->rend.commandBuff, inst->vpRend.indexBuff, 0, VK_INDEX_TYPE_UINT32);
 
-            PushConstants pushConstants;
+            
+            PushConstants pushConstants; 
             pushConstants.model = glm::eulerAngleXY(inst->gui.vpData.orbitAngle.x, inst->gui.vpData.orbitAngle.y);
             pushConstants.view  = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -20.0f));
             pushConstants.proj  = glm::perspective(glm::radians(45.0f), inst->gui.vpData.viewportSize.x / inst->gui.vpData.viewportSize.y, 0.1f, 50.0f);
-            vkCmdPushConstants(inst->rend.commandBuff, inst->vpRend.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
+
+            vkCmdPushConstants(inst->rend.commandBuff, inst->vpRend.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof pushConstants, &pushConstants);
 
             vkCmdDrawIndexed(inst->rend.commandBuff, inst->vpRend.triangleCount, 1, 0, 0, 0);
 
