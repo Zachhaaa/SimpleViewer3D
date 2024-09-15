@@ -7,3 +7,6 @@
 [submodule "Dependencies/ModelLoader"]
 	path = Dependencies/ModelLoader
 	url = D:\\cpp-files\\libraries\\ModelLoader
+[submodule "Dependencies/VulkanHelpers"]
+	path = Dependencies/VulkanHelpers
+	url = D:\\cpp-files\\libraries\\VulkanHelpers

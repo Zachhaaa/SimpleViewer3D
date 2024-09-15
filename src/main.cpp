@@ -1,8 +1,11 @@
-#include "Core/Core.hpp"
+#include "App.hpp"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
 
-	App::init(hInstance, nCmdShow);
+	Core::Instance mainInstance;
+	App::InstanceInfo initInfo = { hInstance, nCmdShow }; 
+
+	App::init(&mainInstance, &initInfo);
 
 	while (true) {
 		
@@ -13,10 +16,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);
 		}
-		App::render();
+		App::render(&mainInstance);
 	}
 
-	App::close();
+	App::close(&mainInstance);
 
 	return 0;
 }

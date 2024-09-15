@@ -11,11 +11,8 @@ project "SimpleViewer3Dapp"
 
     includedirs {
         "%{os.getenv('VULKAN_SDK')}/include",
-        "Dependencies/glm",
+        "Dependencies/*",
         "Dependencies/imgui/backends",
-        "Dependencies/imgui",
-        "Dependencies/TimerApi",
-        "Dependencies/ModelLoader"
     }
 
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
@@ -27,16 +24,23 @@ project "SimpleViewer3Dapp"
         "src/**.h", 
         "src/shaders/**.vert", 
         "src/shaders/**.frag",
+        "Dependencies/**.cpp",
+        "Dependencies/**.hpp",
+    }
+    removefiles {
+        "Dependencies/imgui/**.cpp",
+        "Dependencies/imgui/**.h",
+        "Dependencies/glm/**.cpp",
+        "Dependencies/glm/**.hpp",
+    }
+    files {
         "Dependencies/imgui/*.cpp",
         "Dependencies/imgui/*.h",
         "Dependencies/imgui/backends/imgui_impl_vulkan.cpp",
         "Dependencies/imgui/backends/imgui_impl_vulkan.h",
         "Dependencies/imgui/backends/imgui_impl_win32.cpp",
         "Dependencies/imgui/backends/imgui_impl_win32.h",
-        "Dependencies/TimerApi/*.cpp",
-        "Dependencies/TimerApi/*.hpp",
-        "Dependencies/ModelLoader/*.cpp",
-        "Dependencies/ModelLoader/*.hpp"
+        "Dependencies/glm/glm/**.hpp",
     }
 
     defines     { "_CRT_SECURE_NO_WARNINGS" }
