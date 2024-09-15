@@ -10,3 +10,6 @@
 [submodule "Dependencies/VulkanHelpers"]
 	path = Dependencies/VulkanHelpers
 	url = D:\\cpp-files\\libraries\\VulkanHelpers
+[submodule "Dependencies/TimerApi"]
+	path = Dependencies/TimerApi
+	url = D:\\cpp-files\\libraries\\TimerApi
