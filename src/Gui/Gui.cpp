@@ -1,5 +1,7 @@
 #include "Gui.hpp"
 
+#include <imgui_internal.h>
+
 #include <algorithm>
 
 namespace c_style {
@@ -86,6 +88,8 @@ void Gui::init(InitInfo* initInfo, GuiSizes* guiSizes, float guiDpi) {
         style.Colors[ImGuiCol_TabDimmed]         = c_style::col3;
         style.Colors[ImGuiCol_TabDimmedSelected] = c_style::col3;
 
+        style.Colors[ImGuiCol_ButtonHovered] = ImGui::rgba32toVec4(255, 255, 255, 75);
+
         style.Colors[ImGuiCol_DockingPreview] = c_style::hoverCol;
 
     }
@@ -99,6 +103,7 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
     ImGui::NewFrame();
 
     // Main dockspace
+    ImGuiID dockspaceID;
     {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
 
@@ -117,8 +122,8 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
         ImGui::Begin("Simple Viewer 3D", nullptr, windowFlags);
 
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, prevFramePadding);
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGui::DockSpace(dockspace_id);
+        dockspaceID = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspaceID);
 
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, titleBarPadding));
         if (ImGui::BeginMenuBar())
@@ -197,11 +202,12 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
 
     }
 
-    ImGui::ShowDemoWindow();
-
-    ImGui::SetNextWindowSize({ 600, 600 }, ImGuiCond_FirstUseEver);
-
     ImGuiIO& io = ImGui::GetIO();
+#ifdef DEBUG
+    ImGui::ShowDemoWindow();
+#endif
+#ifdef DEVINFO
+
     if (ImGui::Begin("App Data")) {
         ImGui::Text("Framerate: %f", io.Framerate);
         float (*func)(void*, int) = [](void* data, int i) { return ((float*)data)[i]; };
@@ -210,36 +216,54 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
         ImGui::PlotLines("Frame Time Error", func, data->stats.frameWaitTimesGraph, sampleCount, 0, nullptr, -scale, scale, ImVec2(0, 200));
         ImGui::Text("Scale: %.3fms", scale * 1000);
         ImGui::Text("Viewport resizes: %u", data->stats.resizeCount);
+        ImGui::Text("Performance Times:");
+        ImGui::Text("openFile: %.2fms", 1000 * data->stats.perfTimes.openFile);
+        ImGui::Text("fileClose: %.2fms", 1000 * data->stats.perfTimes.fileClose);
+        ImGui::Text("viewportResize: %.2fms", 1000 * data->stats.perfTimes.viewportResize);
+        ImGui::Text("appLauch: %.2fms", 1000 * data->stats.perfTimes.appLaunch);
+        ImGui::Text("renderingCommands: %.2fms", 1000 * data->stats.perfTimes.renderingCommands);
+
     }
     ImGui::End();
-
+#endif
+ 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    if (ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
 
-        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_None) && ImGui::IsMouseDown(ImGuiMouseButton_Left)) data->vpData.orbitActive = true;
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) data->vpData.orbitActive = false;
-        if (data->vpData.orbitActive) {
-            data->vpData.orbitAngle  += glm::vec2(-0.003 * io.MouseDelta.y, 0.003 * io.MouseDelta.x);
-            data->vpData.orbitAngle.x = glm::clamp(data->vpData.orbitAngle.x, glm::radians(-90.0f), glm::radians(90.0f));
-        }
-        ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
-        if (currentVpSize.x > 0.0 && currentVpSize.y > 0.0) {
-        
-            if (data->vpData.viewportSize != currentVpSize) { 
-                *cmdListPtr++ = Gui::cmd_resizeViewport; 
-                data->vpData.viewportSize = currentVpSize; 
+    for (ViewportGuiData& vpData : data->vpDatas) {
+
+        vpData.visible = false;
+        ImGuiWindowFlags windFlags = ImGuiWindowFlags_NoScrollbar;
+        windFlags |= ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings;
+        ImGui::SetNextWindowDockID(dockspaceID, ImGuiCond_Once);
+        if (ImGui::Begin(vpData.objectName.get(), &vpData.open, windFlags)) {
+            ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
+
+            if (currentVpSize.x > 0.0 && currentVpSize.y > 0.0) vpData.visible = true;
+            else goto ContentNotVisible;
+
+            if (vpData.m_size != currentVpSize) { 
+                vpData.resize = true; 
+                vpData.m_size   = currentVpSize; 
             }
-            ImGui::Image(data->vpData.framebufferTexID, data->vpData.viewportSize);
-        
+            ImGui::Image(vpData.framebufferTexID, vpData.m_size);
+
+            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_None) && ImGui::IsMouseDown(ImGuiMouseButton_Left)) vpData.orbitActive = true;
+            if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) vpData.orbitActive = false;
+            if (vpData.orbitActive) {
+                vpData.orbitAngle  += glm::vec2(-0.003 * io.MouseDelta.y, 0.003 * io.MouseDelta.x);
+                vpData.orbitAngle.x = glm::clamp(vpData.orbitAngle.x, glm::radians(-90.0f), glm::radians(90.0f));
+            }
+            ContentNotVisible:;
+
         }
+        ImGui::End();
+    
 
     }
-    ImGui::End();
+
     ImGui::PopStyleVar();
-    
     ImGui::EndFrame();
     *cmdListPtr = Gui::cmd_null;
-
 }
 
 void Gui::destroy() {

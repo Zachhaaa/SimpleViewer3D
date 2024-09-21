@@ -4,6 +4,11 @@
 #include <ShellScalingApi.h>
 
 #include <VulkanHelpers.hpp>
+
+#ifndef DEVINFO
+#define DISABLE_SCOPEDTIMER
+#endif
+
 #include <Timer.hpp>
 #include <ModelLoader.hpp>
 
@@ -18,6 +23,8 @@ struct PushConstants {
 
 void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
+    scopedTimer(t1, &inst->gui.stats.perfTimes.appLaunch);
+    
     // Init Variables 
     const char* desiredLayers[] = { "VK_LAYER_KHRONOS_validation" };
 
@@ -56,16 +63,16 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
         CORE_ASSERT(c_WindowAspectRatio > 0.0);
 
         if (mntrWidth > mntrHeight) {
-            inst->wind.size.y = int(c_WindowPercentSize * mntrHeight);
-            inst->wind.size.x = int(c_WindowAspectRatio * inst->wind.size.y);
+            inst->wind.m_size.y = int(c_WindowPercentSize * mntrHeight);
+            inst->wind.m_size.x = int(c_WindowAspectRatio * inst->wind.m_size.y);
         }
         else {
-            inst->wind.size.x = int(c_WindowPercentSize * mntrWidth);
-            inst->wind.size.y = int(inst->wind.size.x / c_WindowAspectRatio);
+            inst->wind.m_size.x = int(c_WindowPercentSize * mntrWidth);
+            inst->wind.m_size.y = int(inst->wind.m_size.x / c_WindowAspectRatio);
         }
 
-        int startPosX = int(0.5 * (mntrWidth  - inst->wind.size.x));
-        int startPosY = int(0.5 * (mntrHeight - inst->wind.size.y));
+        int startPosX = int(0.5 * (mntrWidth  - inst->wind.m_size.x));
+        int startPosY = int(0.5 * (mntrHeight - inst->wind.m_size.y));
 
         inst->wind.hwnd = CreateWindowEx(
             0,
@@ -74,8 +81,8 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
             WS_OVERLAPPEDWINDOW,
             startPosX,
             startPosY,
-            inst->wind.size.x,
-            inst->wind.size.y,
+            inst->wind.m_size.x,
+            inst->wind.m_size.y,
             NULL,
             NULL,
             initInfo->hInstance,
@@ -418,7 +425,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        poolInfo.maxSets       = 2;
+        poolInfo.maxSets       = c_vlkn::maxSets;
         poolInfo.poolSizeCount = 0;
         poolInfo.pPoolSizes    = nullptr;
 
@@ -465,7 +472,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
     }
 
-    // viewport (NOT imgui viewport as in a separate window). This is where the 3D model is drawn.
+    // Viewports Renderer creation
     {
 
         // Render Pass Creation
@@ -667,76 +674,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
         }
 
-        mload::Vertex cubeVertices[] = {
-            
-            // right
-            { {  0.5f, -0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
-            { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
-            { {  0.5f,  0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
-            { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
-
-            // top
-            { { -0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
-            { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
-            { {  0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
-            { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
-                                            
-            // front
-            { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-            { { -0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-            { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-            { {  0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-
-            // left
-            { { -0.5f, -0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
-            { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
-            { { -0.5f,  0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
-            { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
-
-            // bottom
-            { { -0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
-            { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
-            { {  0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
-            { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
-
-            // back
-            { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-            { { -0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-            { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-            { {  0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-
-        };
-        uint32_t cubeIndices[] = {
-            
-            // right
-            0, 1, 2, 2, 3, 0,
-
-            // top
-            4, 5, 6, 6, 7, 4,
-
-            // front
-            8, 9, 10, 10, 11, 8,
-
-            // left
-            12, 13, 14, 14, 15, 12,
-
-            // bottom
-            16, 17, 18, 18, 19, 16,
-
-            // back
-            20, 21, 22, 22, 23, 20,
-
-        };
-
-        Core::VertexIndexBuffersInfo buffsInfo{};
-        buffsInfo.vertexData     = cubeVertices;
-        buffsInfo.vertexDataSize = sizeof cubeVertices;
-        buffsInfo.indexData      = cubeIndices;
-        buffsInfo.indexDataSize  = sizeof cubeIndices;
-
-        Core::createVertexIndexBuffers(inst, &buffsInfo);
-
-        inst->vpRend.triangleCount = arraySize(cubeIndices);
+        {} // Fixes visual studion bug with collapsing scopes
 
         // Texture sampler creation 
         {
@@ -765,31 +703,23 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
         }
 
-        // Texture descriptor set creation
+        // Descriptor Set Layout creation
         {
 
             VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-            samplerLayoutBinding.binding            = 0; 
-            samplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            samplerLayoutBinding.descriptorCount    = 1; 
-            samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+            samplerLayoutBinding.binding = 0;
+            samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            samplerLayoutBinding.descriptorCount = 1;
+            samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
             samplerLayoutBinding.pImmutableSamplers = nullptr;
 
-            VkDescriptorSetLayoutCreateInfo layoutInfo{}; 
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layoutInfo.flags        = 0; 
-            layoutInfo.bindingCount = 1; 
-            layoutInfo.pBindings    = &samplerLayoutBinding;
+            layoutInfo.flags = 0;
+            layoutInfo.bindingCount = 1;
+            layoutInfo.pBindings = &samplerLayoutBinding;
 
-            vkCreateDescriptorSetLayout(inst->rend.device, &layoutInfo, nullptr, &inst->vpRend.descriptorSetLayout); 
-
-            VkDescriptorSetAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            allocInfo.descriptorPool     = inst->rend.descriptorPool; 
-            allocInfo.descriptorSetCount = 1;
-            allocInfo.pSetLayouts        = &inst->vpRend.descriptorSetLayout;
-
-            vkAllocateDescriptorSets(inst->rend.device, &allocInfo, &inst->vpRend.descriptorSet);
+            vkCreateDescriptorSetLayout(inst->rend.device, &layoutInfo, nullptr, &inst->vpRend.descriptorSetLayout);
 
         }
 
@@ -806,10 +736,8 @@ void App::render(Core::Instance* inst) {
 
     Gui::Commands cmdList[Gui::cmdCount];
     Gui::draw(inst->wind.hwnd, cmdList, &inst->gui);
-    
-    VkExtent2D viewportExtent = { (uint32_t)inst->gui.vpData.viewportSize.x, (uint32_t)inst->gui.vpData.viewportSize.y };
 
-    // Gui::draw will request certain commands and this executes them
+    // Gui::draw will request certain commands and t xecutes them
     for (Gui::Commands* cmd = cmdList; *cmd != Gui::cmd_null; ++cmd) {
         switch (*cmd) {
 
@@ -831,6 +759,9 @@ void App::render(Core::Instance* inst) {
         }
         case Gui::cmd_openDialog: {
 
+            // -1 because we still need one descriptor set for the frame buffer
+            if (inst->vpRend.vpInstances.size() >= c_vlkn::maxSets - 1) return;
+
             char fileName[MAX_PATH]{};
 
             OPENFILENAMEA ofn{};
@@ -845,12 +776,20 @@ void App::render(Core::Instance* inst) {
 
             if (GetOpenFileNameA(&ofn) != TRUE) return;
 
-            vkQueueWaitIdle(inst->rend.graphicsQueue);
+            scopedTimer(t1, &inst->gui.stats.perfTimes.openFile);
 
-            vkFreeMemory(inst->rend.device, inst->vpRend.vertBuffMem, nullptr);
-            vkDestroyBuffer(inst->rend.device, inst->vpRend.vertBuff, nullptr);
-            vkFreeMemory(inst->rend.device, inst->vpRend.indexBuffMem, nullptr);
-            vkDestroyBuffer(inst->rend.device, inst->vpRend.indexBuff, nullptr);
+            char* fileTitle;
+            char* i = fileName;
+            for (; *i != '\0'; ++i)
+                if (*i == '/' || *i == '\\') fileTitle = i + 1;
+
+            // Early out if window already exists
+            for (Gui::ViewportGuiData& vpData : inst->gui.vpDatas) {
+                if (strcmp(vpData.objectName.get(), fileTitle) == 0) 
+                    return;
+            }
+
+            vkQueueWaitIdle(inst->rend.graphicsQueue);
 
             std::vector<mload::Vertex> vertices;
             std::vector<uint32_t>      indices;
@@ -863,232 +802,288 @@ void App::render(Core::Instance* inst) {
             buffsInfo.indexData = indices.data();
             buffsInfo.indexDataSize = indices.size() * sizeof uint32_t;
 
-            Core::createVertexIndexBuffers(inst, &buffsInfo);
+            inst->vpRend.vpInstances.push_back({});
+            Core::ViewportInstance& newVpInstance = inst->vpRend.vpInstances.back();
+            Core::createVertexIndexBuffers(inst, &newVpInstance, &buffsInfo);
 
-            inst->vpRend.triangleCount = (uint32_t)indices.size(); 
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = inst->rend.descriptorPool;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &inst->vpRend.descriptorSetLayout;
 
-            break;
-        }
-        case Gui::cmd_resizeViewport: {
+            VkResult err = vkAllocateDescriptorSets(inst->rend.device, &allocInfo, &newVpInstance.descriptorSet);
+            CORE_ASSERT(err == VK_SUCCESS && "Descriptor set creation failed");
 
-            ++inst->gui.stats.resizeCount;
+            inst->gui.vpDatas.push_back({});
+            Gui::ViewportGuiData& newVpData = inst->gui.vpDatas.back();
+            newVpData.open = true;
+            newVpData.framebufferTexID = (ImTextureID)newVpInstance.descriptorSet;
 
-            vkDeviceWaitIdle(inst->rend.device);
+            newVpData.objectName.reset(new char[(int)(i - fileTitle) + 1]);
+            strcpy(newVpData.objectName.get(), fileTitle);
+            newVpData.triangleCount = (uint32_t)indices.size();
 
-            // Don't run if this is the first time creating the viewport resources
-            if (inst->vpRend.framebuffer != VK_NULL_HANDLE) {
+            return;
+            
 
-                vkDestroyFramebuffer(inst->rend.device, inst->vpRend.framebuffer, nullptr);
-                vkDestroyImageView(inst->rend.device, inst->vpRend.depthImageView, nullptr);
-                vkFreeMemory(inst->rend.device, inst->vpRend.depthImageMem, nullptr);
-                vkDestroyImage(inst->rend.device, inst->vpRend.depthImage, nullptr);
-                vkDestroyImageView(inst->rend.device, inst->vpRend.imageView, nullptr);
-                vkFreeMemory(inst->rend.device, inst->vpRend.imageMem, nullptr);
-                vkDestroyImage(inst->rend.device, inst->vpRend.image, nullptr);
-
-            }
-
-            // Image creation
-            {
-
-                VkImageCreateInfo imageInfo{};
-                imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-                imageInfo.flags = 0;
-                imageInfo.imageType = VK_IMAGE_TYPE_2D;
-                imageInfo.format = c_vlkn::format;
-                imageInfo.extent = { viewportExtent.width, viewportExtent.height, 1 };
-                imageInfo.mipLevels = 1;
-                imageInfo.arrayLayers = 1;
-                imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-                imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-                imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-                imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-                imageInfo.queueFamilyIndexCount = 1;
-                imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
-                imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-                VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &inst->vpRend.image);
-                CORE_ASSERT(err == VK_SUCCESS && "Image creation failed");
-
-            }
-
-            // Image memory creation
-            {
-
-                VkMemoryRequirements memRequirements;
-                vkGetImageMemoryRequirements(inst->rend.device, inst->vpRend.image, &memRequirements);
-                VkPhysicalDeviceMemoryProperties memProps;
-                vkGetPhysicalDeviceMemoryProperties(inst->rend.physicalDevice, &memProps);
-
-                VkMemoryAllocateInfo allocInfo{};
-                allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-                allocInfo.allocationSize = memRequirements.size;
-
-                uint32_t i = 0;
-                for (; i < memProps.memoryTypeCount; i++) {
-                    if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-                        break;
-                    }
-                }
-
-                allocInfo.memoryTypeIndex = i;
-                VkResult err = vkAllocateMemory(inst->rend.device, &allocInfo, nullptr, &inst->vpRend.imageMem);
-                CORE_ASSERT(err == VK_SUCCESS && "Buffer allocation failed");
-
-                vkBindImageMemory(inst->rend.device, inst->vpRend.image, inst->vpRend.imageMem, 0);
-
-            }
-
-            // Image view creation
-            {
-
-                VkImageViewCreateInfo createInfo{};
-                createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-                createInfo.flags = 0;
-                createInfo.image = inst->vpRend.image;
-                createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-                createInfo.format = c_vlkn::format;
-                createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                createInfo.subresourceRange.baseMipLevel = 0;
-                createInfo.subresourceRange.levelCount = 1;
-                createInfo.subresourceRange.baseArrayLayer = 0;
-                createInfo.subresourceRange.layerCount = 1;
-
-                VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &inst->vpRend.imageView);
-                CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
-
-            }
-
-            // Depth image creation
-            {
-
-                VkImageCreateInfo imageInfo{};
-                imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-                imageInfo.flags = 0;
-                imageInfo.imageType = VK_IMAGE_TYPE_2D;
-                imageInfo.format = c_vlkn::depthFormat;
-                imageInfo.extent = { viewportExtent.width, viewportExtent.height, 1 };
-                imageInfo.mipLevels = 1;
-                imageInfo.arrayLayers = 1;
-                imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-                imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-                imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-                imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-                imageInfo.queueFamilyIndexCount = 1;
-                imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
-                imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-                VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &inst->vpRend.depthImage);
-                CORE_ASSERT(err == VK_SUCCESS && "Depth image creation failed");
-
-            }
-
-            // Image memory creation
-            {
-
-                VkMemoryRequirements memRequirements;
-                vkGetImageMemoryRequirements(inst->rend.device, inst->vpRend.depthImage, &memRequirements);
-                VkPhysicalDeviceMemoryProperties memProps;
-                vkGetPhysicalDeviceMemoryProperties(inst->rend.physicalDevice, &memProps);
-
-                VkMemoryAllocateInfo allocInfo{};
-                allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-                allocInfo.allocationSize = memRequirements.size;
-
-                uint32_t i = 0;
-                for (; i < memProps.memoryTypeCount; i++) {
-                    if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-                        break;
-                    }
-                }
-
-                allocInfo.memoryTypeIndex = i;
-                VkResult err = vkAllocateMemory(inst->rend.device, &allocInfo, nullptr, &inst->vpRend.depthImageMem);
-                CORE_ASSERT(err == VK_SUCCESS && "Buffer allocation failed");
-
-                vkBindImageMemory(inst->rend.device, inst->vpRend.depthImage, inst->vpRend.depthImageMem, 0);
-
-            }
-
-            // Depth image view creation
-            {
-
-                VkImageViewCreateInfo createInfo{};
-                createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-                createInfo.flags = 0;
-                createInfo.image = inst->vpRend.depthImage;
-                createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-                createInfo.format = c_vlkn::depthFormat;
-                createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-                createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                createInfo.subresourceRange.baseMipLevel = 0;
-                createInfo.subresourceRange.levelCount = 1;
-                createInfo.subresourceRange.baseArrayLayer = 0;
-                createInfo.subresourceRange.layerCount = 1;
-
-                VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &inst->vpRend.depthImageView);
-                CORE_ASSERT(err == VK_SUCCESS && "Depth image view creation failed");
-
-            }
-
-            // Update Descriptor Set
-            {
-
-                VkDescriptorImageInfo imageInfo{};
-                imageInfo.sampler = inst->vpRend.frameSampler;
-                imageInfo.imageView = inst->vpRend.imageView;
-                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-                VkWriteDescriptorSet writeDescriptor{};
-                writeDescriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                writeDescriptor.dstSet = inst->vpRend.descriptorSet;
-                writeDescriptor.dstBinding = 0;
-                writeDescriptor.dstArrayElement = 0;
-                writeDescriptor.descriptorCount = 1;
-                writeDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                writeDescriptor.pImageInfo = &imageInfo;
-
-                vkUpdateDescriptorSets(inst->rend.device, 1, &writeDescriptor, 0, nullptr);
-
-                inst->gui.vpData.framebufferTexID = (ImTextureID)inst->vpRend.descriptorSet;
-
-            }
-
-            // Framebuffer creation
-            {
-
-                VkImageView attachments[] = { inst->vpRend.imageView, inst->vpRend.depthImageView };
-
-                VkFramebufferCreateInfo framebufferInfo{};
-                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-                framebufferInfo.renderPass = inst->vpRend.renderPass;
-                framebufferInfo.attachmentCount = arraySize(attachments);
-                framebufferInfo.pAttachments = attachments;
-                framebufferInfo.width = viewportExtent.width;
-                framebufferInfo.height = viewportExtent.height;
-                framebufferInfo.layers = 1;
-
-                VkResult err = vkCreateFramebuffer(inst->rend.device, &framebufferInfo, nullptr, &inst->vpRend.framebuffer);
-                CORE_ASSERT(err == VK_SUCCESS && "Frambuffer creation failed");
-
-            }
-
-            break;
         }
 
         }
     }
-    {} // Fixes visual studio bug with collapsing scopes
+
+    CORE_ASSERT(inst->vpRend.vpInstances.size() == inst->gui.vpDatas.size());
+    // Resize/Close windows if needed
+    for (int i = 0; i < inst->gui.vpDatas.size(); ++i) {
+
+        Gui::ViewportGuiData& vpData = inst->gui.vpDatas[i];
+        Core::ViewportInstance& vpInstance = inst->vpRend.vpInstances[i];
+        if (!vpData.open) {
+            scopedTimer(t1, &inst->gui.stats.perfTimes.fileClose);
+
+            vkDeviceWaitIdle(inst->rend.device);
+
+            vkFreeDescriptorSets(inst->rend.device, inst->rend.descriptorPool, 1, &vpInstance.descriptorSet);
+            vkFreeMemory(inst->rend.device, vpInstance.indexBuffMem, nullptr);
+            vkDestroyBuffer(inst->rend.device, vpInstance.indexBuff, nullptr);
+            vkFreeMemory(inst->rend.device, vpInstance.vertBuffMem, nullptr);
+            vkDestroyBuffer(inst->rend.device, vpInstance.vertBuff, nullptr);
+            vkDestroyFramebuffer(inst->rend.device, vpInstance.framebuffer, nullptr);
+            vkDestroyImageView(inst->rend.device, vpInstance.depthImageView, nullptr);
+            vkFreeMemory(inst->rend.device, vpInstance.depthImageMem, nullptr);
+            vkDestroyImage(inst->rend.device, vpInstance.depthImage, nullptr);
+            vkDestroyImageView(inst->rend.device, vpInstance.imageView, nullptr);
+            vkFreeMemory(inst->rend.device, vpInstance.imageMem, nullptr);
+            vkDestroyImage(inst->rend.device, vpInstance.image, nullptr);
+
+            // Remove the window
+            inst->vpRend.vpInstances.erase(inst->vpRend.vpInstances.begin() + i);
+            inst->gui.vpDatas.erase(inst->gui.vpDatas.begin() + i);
+
+            return;
+        }
+        else if (vpData.resize) {
+        scopedTimer(t1, &inst->gui.stats.perfTimes.viewportResize);
+        vpData.resize = false;
+#ifdef DEVINFO
+        ++inst->gui.stats.resizeCount;
+#endif
+
+        vkDeviceWaitIdle(inst->rend.device);
+
+        // Don't run if this is the first time creating the viewport resources
+        if (vpInstance.framebuffer != VK_NULL_HANDLE) {
+
+            vkDestroyFramebuffer(inst->rend.device, vpInstance.framebuffer, nullptr);
+            vkDestroyImageView(inst->rend.device, vpInstance.depthImageView, nullptr);
+            vkFreeMemory(inst->rend.device, vpInstance.depthImageMem, nullptr);
+            vkDestroyImage(inst->rend.device, vpInstance.depthImage, nullptr);
+            vkDestroyImageView(inst->rend.device, vpInstance.imageView, nullptr);
+            vkFreeMemory(inst->rend.device, vpInstance.imageMem, nullptr);
+            vkDestroyImage(inst->rend.device, vpInstance.image, nullptr);
+
+        }
+
+        VkExtent2D viewportExtent = { (uint32_t)vpData.m_size.x, (uint32_t)vpData.m_size.y };
+        // Image creation
+        {
+
+            VkImageCreateInfo imageInfo{};
+            imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            imageInfo.flags = 0;
+            imageInfo.imageType = VK_IMAGE_TYPE_2D;
+            imageInfo.format = c_vlkn::format;
+            imageInfo.extent = { viewportExtent.width, viewportExtent.height, 1 };
+            imageInfo.mipLevels = 1;
+            imageInfo.arrayLayers = 1;
+            imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+            imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+            imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            imageInfo.queueFamilyIndexCount = 1;
+            imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
+            imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+            VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInstance.image);
+            CORE_ASSERT(err == VK_SUCCESS && "Image creation failed");
+
+        }
+
+        // Image memory creation
+        {
+
+            VkMemoryRequirements memRequirements;
+            vkGetImageMemoryRequirements(inst->rend.device, vpInstance.image, &memRequirements);
+            VkPhysicalDeviceMemoryProperties memProps;
+            vkGetPhysicalDeviceMemoryProperties(inst->rend.physicalDevice, &memProps);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+
+            uint32_t i = 0;
+            for (; i < memProps.memoryTypeCount; i++) {
+                if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                    break;
+                }
+            }
+
+            allocInfo.memoryTypeIndex = i;
+            VkResult err = vkAllocateMemory(inst->rend.device, &allocInfo, nullptr, &vpInstance.imageMem);
+            CORE_ASSERT(err == VK_SUCCESS && "Buffer allocation failed");
+
+            vkBindImageMemory(inst->rend.device, vpInstance.image, vpInstance.imageMem, 0);
+
+        }
+
+        // Image view creation
+        {
+
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.flags = 0;
+            createInfo.image = vpInstance.image;
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = c_vlkn::format;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
+
+            VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInstance.imageView);
+            CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
+
+        }
+
+        // Depth image creation
+        {
+
+            VkImageCreateInfo imageInfo{};
+            imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            imageInfo.flags = 0;
+            imageInfo.imageType = VK_IMAGE_TYPE_2D;
+            imageInfo.format = c_vlkn::depthFormat;
+            imageInfo.extent = { viewportExtent.width, viewportExtent.height, 1 };
+            imageInfo.mipLevels = 1;
+            imageInfo.arrayLayers = 1;
+            imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+            imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+            imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            imageInfo.queueFamilyIndexCount = 1;
+            imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
+            imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+            VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInstance.depthImage);
+            CORE_ASSERT(err == VK_SUCCESS && "Depth image creation failed");
+
+        }
+
+        // Image memory creation
+        {
+
+            VkMemoryRequirements memRequirements;
+            vkGetImageMemoryRequirements(inst->rend.device, vpInstance.depthImage, &memRequirements);
+            VkPhysicalDeviceMemoryProperties memProps;
+            vkGetPhysicalDeviceMemoryProperties(inst->rend.physicalDevice, &memProps);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+
+            uint32_t i = 0;
+            for (; i < memProps.memoryTypeCount; i++) {
+                if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                    break;
+                }
+            }
+
+            allocInfo.memoryTypeIndex = i;
+            VkResult err = vkAllocateMemory(inst->rend.device, &allocInfo, nullptr, &vpInstance.depthImageMem);
+            CORE_ASSERT(err == VK_SUCCESS && "Buffer allocation failed");
+
+            vkBindImageMemory(inst->rend.device, vpInstance.depthImage, vpInstance.depthImageMem, 0);
+
+        }
+
+        // Depth image view creation
+        {
+
+            VkImageViewCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.flags = 0;
+            createInfo.image = vpInstance.depthImage;
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = c_vlkn::depthFormat;
+            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            createInfo.subresourceRange.baseMipLevel = 0;
+            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.baseArrayLayer = 0;
+            createInfo.subresourceRange.layerCount = 1;
+
+            VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInstance.depthImageView);
+            CORE_ASSERT(err == VK_SUCCESS && "Depth image view creation failed");
+
+        }
+
+        // Update Descriptor Set
+        {
+
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.sampler = inst->vpRend.frameSampler;
+            imageInfo.imageView = vpInstance.imageView;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            VkWriteDescriptorSet writeDescriptor{};
+            writeDescriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writeDescriptor.dstSet = vpInstance.descriptorSet;
+            writeDescriptor.dstBinding = 0;
+            writeDescriptor.dstArrayElement = 0;
+            writeDescriptor.descriptorCount = 1;
+            writeDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            writeDescriptor.pImageInfo = &imageInfo;
+
+            vkUpdateDescriptorSets(inst->rend.device, 1, &writeDescriptor, 0, nullptr);
+
+        }
+
+        // Framebuffer creation
+        {
+
+            VkImageView attachments[] = { vpInstance.imageView, vpInstance.depthImageView };
+
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = inst->vpRend.renderPass;
+            framebufferInfo.attachmentCount = arraySize(attachments);
+            framebufferInfo.pAttachments = attachments;
+            framebufferInfo.width = viewportExtent.width;
+            framebufferInfo.height = viewportExtent.height;
+            framebufferInfo.layers = 1;
+
+            VkResult err = vkCreateFramebuffer(inst->rend.device, &framebufferInfo, nullptr, &vpInstance.framebuffer);
+            CORE_ASSERT(err == VK_SUCCESS && "Frambuffer creation failed");
+
+        }
+
+        }
+
+    }
+
+    {} // fixies visual studio bug with collapsing scopes
 
     // Rendering
     {
+        scopedTimer(t1, &inst->gui.stats.perfTimes.renderingCommands);
 
         vkWaitForFences(inst->rend.device, 1, &inst->rend.frameFinishedFence, VK_TRUE, UINT64_MAX);
         vkResetFences  (inst->rend.device, 1, &inst->rend.frameFinishedFence);
@@ -1107,11 +1102,16 @@ void App::render(Core::Instance* inst) {
         VkClearValue clearValues[2]{};
 
         // Viewport render pass
-        if (viewportExtent.width > 0 && viewportExtent.height > 0) {
+        for (int i = 0; i < inst->gui.vpDatas.size(); ++i) {
+            Gui::ViewportGuiData& vpData = inst->gui.vpDatas[i];
+            if (!vpData.visible) continue; 
 
+            Core::ViewportInstance& vpInstance = inst->vpRend.vpInstances[i]; 
+
+            VkExtent2D viewportExtent = { (uint32_t)vpData.m_size.x, (uint32_t)vpData.m_size.y };
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = inst->vpRend.renderPass;
-            renderPassInfo.framebuffer = inst->vpRend.framebuffer;
+            renderPassInfo.renderPass        = inst->vpRend.renderPass;
+            renderPassInfo.framebuffer       = vpInstance.framebuffer;
             renderPassInfo.renderArea.offset = { 0, 0 };
             renderPassInfo.renderArea.extent = viewportExtent;
 
@@ -1128,8 +1128,8 @@ void App::render(Core::Instance* inst) {
             VkViewport viewport{};
             viewport.x        = 0.0f;
             viewport.y        = 0.0f;
-            viewport.width    = inst->gui.vpData.viewportSize.x;
-            viewport.height   = inst->gui.vpData.viewportSize.y;
+            viewport.width    = vpData.m_size.x;
+            viewport.height   = vpData.m_size.y;
             viewport.minDepth = 0.0f;
             viewport.maxDepth = 1.0f;
             vkCmdSetViewport(inst->rend.commandBuff, 0, 1, &viewport);
@@ -1140,18 +1140,18 @@ void App::render(Core::Instance* inst) {
             vkCmdSetScissor(inst->rend.commandBuff, 0, 1, &scissor);
 
             VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(inst->rend.commandBuff, 0, 1, &inst->vpRend.vertBuff, offsets);
-            vkCmdBindIndexBuffer  (inst->rend.commandBuff, inst->vpRend.indexBuff, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindVertexBuffers(inst->rend.commandBuff, 0, 1, &vpInstance.vertBuff, offsets);
+            vkCmdBindIndexBuffer  (inst->rend.commandBuff, vpInstance.indexBuff, 0, VK_INDEX_TYPE_UINT32);
 
             
             PushConstants pushConstants; 
-            pushConstants.model = glm::eulerAngleXY(inst->gui.vpData.orbitAngle.x, inst->gui.vpData.orbitAngle.y);
+            pushConstants.model = glm::eulerAngleXY(vpData.orbitAngle.x, vpData.orbitAngle.y);
             pushConstants.view  = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -20.0f));
-            pushConstants.proj  = glm::perspective(glm::radians(45.0f), inst->gui.vpData.viewportSize.x / inst->gui.vpData.viewportSize.y, 0.1f, 50.0f);
+            pushConstants.proj  = glm::perspective(glm::radians(45.0f), vpData.m_size.x / vpData.m_size.y, 0.1f, 50.0f);
 
             vkCmdPushConstants(inst->rend.commandBuff, inst->vpRend.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof pushConstants, &pushConstants);
 
-            vkCmdDrawIndexed(inst->rend.commandBuff, inst->vpRend.triangleCount, 1, 0, 0, 0);
+            vkCmdDrawIndexed(inst->rend.commandBuff, vpData.triangleCount, 1, 0, 0, 0);
 
             vkCmdEndRenderPass(inst->rend.commandBuff);
 
@@ -1207,19 +1207,23 @@ void App::render(Core::Instance* inst) {
             CORE_ASSERT(err == VK_SUCCESS && "Presenting failed");
 
         }
-
-        float* timesArray = inst->gui.stats.frameWaitTimesGraph; 
-        constexpr uint32_t sampleCount = arraySize(inst->gui.stats.frameWaitTimesGraph);
-        for (float* value = timesArray; value < timesArray + sampleCount; ++value)
-            value[0] = value[1];
-
-        double timeError = inst->wind.refreshInterval - ImGui::GetIO().DeltaTime;
-        timesArray[sampleCount - 1] = (float)timeError;
-        inst->vpRend.frameWaitTime += 0.5 * timeError;
-
-        sleepFor(inst->vpRend.frameWaitTime);
-
+         
     }
+
+    float timeError = inst->wind.refreshInterval - ImGui::GetIO().DeltaTime;
+
+#ifdef DEVINFO
+    float* timesArray = inst->gui.stats.frameWaitTimesGraph; 
+    constexpr uint32_t sampleCount = arraySize(inst->gui.stats.frameWaitTimesGraph);
+    for (float* value = timesArray; value < timesArray + sampleCount; ++value)
+        value[0] = value[1];
+
+    timesArray[sampleCount - 1] = timeError;
+#endif 
+
+    inst->rend.frameWaitTime += 0.5f * timeError;
+
+    sleepFor(inst->rend.frameWaitTime);
 
 }
 
@@ -1230,25 +1234,30 @@ void App::close(Core::Instance* inst) {
     // IMPORTANT: All vulkan clean up must happen after this line. Leave extra space below.
 
 
-     // Viewport cleanup
+     // Viewports cleanup
     {
 
         vkDestroyDescriptorSetLayout(inst->rend.device, inst->vpRend.descriptorSetLayout, nullptr);
         vkDestroySampler            (inst->rend.device, inst->vpRend.frameSampler,        nullptr);
-        vkFreeMemory                (inst->rend.device, inst->vpRend.vertBuffMem,         nullptr);
-        vkDestroyBuffer             (inst->rend.device, inst->vpRend.vertBuff,            nullptr);
-        vkFreeMemory                (inst->rend.device, inst->vpRend.indexBuffMem,        nullptr);
-        vkDestroyBuffer             (inst->rend.device, inst->vpRend.indexBuff,           nullptr);
         vkDestroyPipeline           (inst->rend.device, inst->vpRend.graphicsPipeline,    nullptr);
         vkDestroyPipelineLayout     (inst->rend.device, inst->vpRend.pipelineLayout,      nullptr);
-        vkDestroyFramebuffer        (inst->rend.device, inst->vpRend.framebuffer,         nullptr);
         vkDestroyRenderPass         (inst->rend.device, inst->vpRend.renderPass,          nullptr);
-        vkDestroyImageView          (inst->rend.device, inst->vpRend.depthImageView,      nullptr);
-        vkFreeMemory                (inst->rend.device, inst->vpRend.depthImageMem,       nullptr);
-        vkDestroyImage              (inst->rend.device, inst->vpRend.depthImage,          nullptr);
-        vkDestroyImageView          (inst->rend.device, inst->vpRend.imageView,           nullptr);
-        vkFreeMemory                (inst->rend.device, inst->vpRend.imageMem,            nullptr);
-        vkDestroyImage              (inst->rend.device, inst->vpRend.image,               nullptr);
+
+        for (Core::ViewportInstance& vpInstance : inst->vpRend.vpInstances) {
+
+            vkFreeMemory                (inst->rend.device, vpInstance.indexBuffMem,        nullptr);
+            vkDestroyBuffer             (inst->rend.device, vpInstance.indexBuff,           nullptr);
+            vkFreeMemory                (inst->rend.device, vpInstance.vertBuffMem,         nullptr);
+            vkDestroyBuffer             (inst->rend.device, vpInstance.vertBuff,            nullptr);
+            vkDestroyFramebuffer        (inst->rend.device, vpInstance.framebuffer,         nullptr);
+            vkDestroyImageView          (inst->rend.device, vpInstance.depthImageView,      nullptr);
+            vkFreeMemory                (inst->rend.device, vpInstance.depthImageMem,       nullptr);
+            vkDestroyImage              (inst->rend.device, vpInstance.depthImage,          nullptr);
+            vkDestroyImageView          (inst->rend.device, vpInstance.imageView,           nullptr);
+            vkFreeMemory                (inst->rend.device, vpInstance.imageMem,            nullptr);
+            vkDestroyImage              (inst->rend.device, vpInstance.image,               nullptr);
+
+        }
 
     }
 

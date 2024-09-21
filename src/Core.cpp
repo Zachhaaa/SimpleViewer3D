@@ -29,8 +29,8 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
         }
         else {
             createInfo.imageExtent = {
-                std::clamp((unsigned)inst->wind.size.x, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-                std::clamp((unsigned)inst->wind.size.y, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+                std::clamp((unsigned)inst->wind.m_size.x, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+                std::clamp((unsigned)inst->wind.m_size.y, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
             };
 
         }
@@ -148,7 +148,7 @@ void Core::recreateSwapchain(Instance* inst) {
 
 }
 
-void Core::createVertexIndexBuffers(Instance* inst, VertexIndexBuffersInfo* buffsInfo) {
+void Core::createVertexIndexBuffers(Instance* inst, ViewportInstance* vpInst, VertexIndexBuffersInfo* buffsInfo) {
 
     VkBuffer       vertStageBuff, indexStageBuff;
     VkDeviceMemory vertStageMem,  indexStageMem;
@@ -158,7 +158,7 @@ void Core::createVertexIndexBuffers(Instance* inst, VertexIndexBuffersInfo* buff
 
         vlknh::BufferCreateInfo buffInfo{};
         buffInfo.physicalDevice = inst->rend.physicalDevice;
-        buffInfo.size           = buffsInfo->vertexDataSize;
+        buffInfo.m_size           = buffsInfo->vertexDataSize;
         buffInfo.usage          = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         buffInfo.properties     = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -167,7 +167,7 @@ void Core::createVertexIndexBuffers(Instance* inst, VertexIndexBuffersInfo* buff
 
         buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         buffInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        vlknh::createBuffer(inst->rend.device, buffInfo, &inst->vpRend.vertBuff, &inst->vpRend.vertBuffMem);
+        vlknh::createBuffer(inst->rend.device, buffInfo, &vpInst->vertBuff, &vpInst->vertBuffMem);
 
     }
 
@@ -176,7 +176,7 @@ void Core::createVertexIndexBuffers(Instance* inst, VertexIndexBuffersInfo* buff
 
         vlknh::BufferCreateInfo buffInfo{};
         buffInfo.physicalDevice = inst->rend.physicalDevice;
-        buffInfo.size           = buffsInfo->indexDataSize;
+        buffInfo.m_size           = buffsInfo->indexDataSize;
         buffInfo.usage          = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         buffInfo.properties     = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -185,14 +185,14 @@ void Core::createVertexIndexBuffers(Instance* inst, VertexIndexBuffersInfo* buff
 
         buffInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         buffInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        vlknh::createBuffer(inst->rend.device, buffInfo, &inst->vpRend.indexBuff, &inst->vpRend.indexBuffMem);
+        vlknh::createBuffer(inst->rend.device, buffInfo, &vpInst->indexBuff, &vpInst->indexBuffMem);
 
     }
 
     VkCommandBuffer singleTimeBuff; 
     vlknh::SingleTimeCommandBuffer::begin  (inst->rend.device, inst->rend.commandPool, &singleTimeBuff);
-    vlknh::SingleTimeCommandBuffer::copy   (singleTimeBuff, buffsInfo->vertexDataSize, vertStageBuff, inst->vpRend.vertBuff);
-    vlknh::SingleTimeCommandBuffer::copy   (singleTimeBuff, buffsInfo->indexDataSize, indexStageBuff, inst->vpRend.indexBuff);
+    vlknh::SingleTimeCommandBuffer::copy   (singleTimeBuff, buffsInfo->vertexDataSize, vertStageBuff, vpInst->vertBuff);
+    vlknh::SingleTimeCommandBuffer::copy   (singleTimeBuff, buffsInfo->indexDataSize, indexStageBuff, vpInst->indexBuff);
     vlknh::SingleTimeCommandBuffer::submit (inst->rend.device, singleTimeBuff, inst->rend.commandPool, inst->rend.graphicsQueue);
 
     vkQueueWaitIdle(inst->rend.graphicsQueue);
@@ -269,8 +269,8 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     }
     case WM_SIZE: {
 
-        inst->wind.size.x = LOWORD(lParam);
-        inst->wind.size.y = HIWORD(lParam);
+        inst->wind.m_size.x = LOWORD(lParam);
+        inst->wind.m_size.y = HIWORD(lParam);
 
         recreateSwapchain(inst);
         App::render(inst);

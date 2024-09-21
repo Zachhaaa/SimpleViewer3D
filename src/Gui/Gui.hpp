@@ -12,6 +12,8 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_operators.h>
 
+#include <memory>
+#include <vector>
 
 namespace Gui {
 
@@ -23,7 +25,6 @@ enum Commands {
 	cmd_restoreWindow,
 	cmd_closeWindow,
 	cmd_openDialog,
-	cmd_resizeViewport,
 
 	cmdCount // Use this for the number of enum values in this enum
 
@@ -54,27 +55,45 @@ struct GuiSizes {
 		
 };
 
-struct DisplayData {
+struct PerformanceTimes {
 
-	float   frameWaitTimesGraph[200];
-	uint32_t resizeCount;
+	float openFile;
+	float fileClose;
+	float viewportResize;
+	float appLaunch;
+	float renderingCommands;
 
 };
 
-struct ViewportRenderData {
+struct DisplayData {
 
+	float            frameWaitTimesGraph[200];
+	uint32_t         resizeCount;
+	PerformanceTimes perfTimes;
+
+};
+
+struct ViewportGuiData {
+
+	bool        open;
+	bool        visible; 
+	bool        resize;
 	bool        orbitActive;
+	std::unique_ptr<char[]> objectName;
 	glm::vec2   orbitAngle;
-	ImVec2      viewportSize;
+	ImVec2      m_size;
 	ImTextureID framebufferTexID; 
+	uint32_t    triangleCount;
 
 };
 
 struct DrawData {
 
-	GuiSizes            guiSizes; 
+	GuiSizes            guiSizes;
+#ifdef DEVINFO
 	DisplayData         stats{};
-	ViewportRenderData  vpData{};
+#endif
+	std::vector<ViewportGuiData> vpDatas;
 
 };
 

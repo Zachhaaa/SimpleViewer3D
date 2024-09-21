@@ -14,6 +14,8 @@
 
 #include <glm/glm.hpp>
 
+#include <vector>
+
 // macros
 #define arraySize(array) (sizeof(array) / sizeof(array[0]))
 #define CORE_ASSERT(exp) assert(exp);
@@ -24,9 +26,9 @@ namespace Core {
 struct WindowInstance {
 
     HWND                hwnd;
-    glm::ivec2          size; // units: pixels
+    glm::ivec2          m_size; // units: pixels
     float               dpi;  // set by display scaling
-    double              refreshInterval;
+    float              refreshInterval;
 
 };
 
@@ -51,33 +53,43 @@ struct VlknRenderInstance {
     VkCommandPool            commandPool;
     VkCommandBuffer          commandBuff;
     VkDescriptorPool         descriptorPool;
+    //uint32_t                 maxDescriptorSets;
+    //uint32_t                 setCount;
     VkSemaphore              renderDoneSemaphore;
     VkSemaphore              imageReadySemaphore;
     VkFence                  frameFinishedFence;
+    float                    frameWaitTime;
 
 };
 
-struct ViewportRenderInstance {
+// NOT imgui viewport as in a separate window.This is where the 3D model is drawn.
+struct ViewportInstance {
 
-    VkImage               image;
-    VkDeviceMemory        imageMem;
-    VkImageView           imageView;
+    VkImage                 image;
+    VkDeviceMemory          imageMem;
+    VkImageView             imageView;
+    VkFramebuffer           framebuffer;
+    VkImage                 depthImage;
+    VkDeviceMemory          depthImageMem;
+    VkImageView             depthImageView;
+    VkBuffer                vertBuff;
+    VkDeviceMemory          vertBuffMem;
+    VkBuffer                indexBuff;
+    VkDeviceMemory          indexBuffMem;
+    VkDescriptorSet         descriptorSet;
+    
+};
+
+struct ViewportsRenderInstance {
+
     VkRenderPass          renderPass;
-    VkFramebuffer         framebuffer;
-    VkImage               depthImage;
-    VkDeviceMemory        depthImageMem;
-    VkImageView           depthImageView;
     VkPipelineLayout      pipelineLayout;
     VkPipeline            graphicsPipeline;
-    VkBuffer              vertBuff;
-    VkDeviceMemory        vertBuffMem;
-    VkBuffer              indexBuff;
-    VkDeviceMemory        indexBuffMem;
-    uint32_t              triangleCount;
     VkSampler             frameSampler;
     VkDescriptorSetLayout descriptorSetLayout;
-    VkDescriptorSet       descriptorSet;
-    double                frameWaitTime; 
+
+    std::vector<ViewportInstance> vpInstances;
+
 
 };
 
@@ -85,7 +97,7 @@ struct Instance {
 
     WindowInstance          wind{};
     VlknRenderInstance      rend{};
-    ViewportRenderInstance  vpRend{};
+    ViewportsRenderInstance vpRend{};
     Gui::DrawData           gui; 
 
 };
@@ -109,7 +121,7 @@ void     createFramebuffers        (VlknRenderInstance* rend);
 void     cleanupSwapchainResources (VlknRenderInstance* rend);
 void     recreateSwapchain         (Instance* inst);
 
-void     createVertexIndexBuffers  (Instance* inst, VertexIndexBuffersInfo* buffsInfo);
+void     createVertexIndexBuffers  (Instance* inst, ViewportInstance* vpInst, VertexIndexBuffersInfo* buffsInfo);
 
 VkResult CreateDebugUtilsMessengerEXT  (VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void     DestroyDebugUtilsMessengerEXT (VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks * pAllocator);

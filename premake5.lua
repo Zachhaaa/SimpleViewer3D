@@ -1,5 +1,5 @@
 workspace "SimpleViewer3D" 
-    configurations { "Debug", "OptDebug", "Release" }
+    configurations { "Debug", "OptDebug", "DevRelease", "Dist" }
     platforms      { "x64" }
 
 project "SimpleViewer3Dapp"
@@ -55,22 +55,31 @@ project "SimpleViewer3Dapp"
         buildcommands "glslc %{file.relpath} -o res/shaders/%{file.name}.spv -O"
         buildoutputs  "res/shaders/%{file.name}.spv"
     
-    -- Standard Debug mode.
+    -- Standard Debug mode
     filter "configurations:Debug"
-        defines { "DEBUG", "ENABLE_VK_VALIDATION_LAYERS" }
+        defines { "DEBUG", "ENABLE_VK_VALIDATION_LAYERS", "DEVINFO" }
         symbols "On"
         runtime "Debug"
 
-    -- Debug mode with opimizations in Debug is unussably slow.
+    -- Debug mode with opimizations if Debug is unussably slow.
     filter "configurations:OptDebug"
-        defines  { "DEBUG" }
+        defines  { "DEBUG", "ENABLE_VK_VALIDATION_LAYERS", "DEVINFO" }
         symbols "On"
         optimize "Speed"
         inlining "Auto"
         runtime "Release"
 
-    -- Standard, fully optmized release build. 
-    filter "configurations:Release"
+    -- Fully optimized build with all of the developer info (Frame times, performance metrics, etc). 
+    filter "configurations:DevRelease"
+        defines  { "NDEBUG", "DEVINFO" }
+        optimize "Speed"
+        symbols  "Off"
+        inlining "Auto"
+        runtime "Release"
+        flags { "LinkTimeOptimization" }
+
+    --  Fully optimized build that will be the distributed copy. 
+    filter "configurations:Dist"
         defines  { "NDEBUG" }
         optimize "Speed"
         symbols  "Off"

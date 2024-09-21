@@ -11,8 +11,9 @@ namespace c_vlkn {
 
 constexpr VkColorSpaceKHR  colorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 constexpr VkFormat         format      = VK_FORMAT_R8G8B8A8_UNORM;
-constexpr VkPresentModeKHR presentMode = VK_PRESENT_MODE_MAILBOX_KHR; 
+constexpr VkPresentModeKHR presentMode = VK_PRESENT_MODE_MAILBOX_KHR; // NOTE: The framerate is limited by a sleep (check bottom of App::render()) to reduce input lag but not render unnecessary frames.
 constexpr uint32_t         imageCount  = 2; 
+constexpr uint32_t         maxSets     = 101;
 
 constexpr VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
 
