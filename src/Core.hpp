@@ -87,6 +87,10 @@ struct ViewportsRenderInstance {
     VkPipeline            graphicsPipeline;
     VkSampler             frameSampler;
     VkDescriptorSetLayout descriptorSetLayout;
+    VkImage               logoImg;
+    VkDeviceMemory        logoImgMem;
+    VkImageView           logoImgView;
+    VkDescriptorSet       logoDescriptor;
 
     std::vector<ViewportInstance> vpInstances;
 
@@ -98,6 +102,7 @@ struct Instance {
     WindowInstance          wind{};
     VlknRenderInstance      rend{};
     ViewportsRenderInstance vpRend{};
+    // DO NOT ZERO the following struct. gui.guiSizes must not be set to zero and must use init values.
     Gui::DrawData           gui; 
 
 };

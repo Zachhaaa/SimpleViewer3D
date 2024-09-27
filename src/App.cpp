@@ -17,8 +17,13 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
 
+#define NANOSVG_IMPLEMENTATION	
+#include <nanosvg.h>
+#define NANOSVGRAST_IMPLEMENTATION
+#include <nanosvgrast.h>
+
 struct PushConstants {
-    glm::mat4 model, view, proj; 
+    glm::mat4 view, proj; 
 };
 
 void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
@@ -452,25 +457,6 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
         CORE_ASSERT(err == VK_SUCCESS && "Fence Creation failed");
 
     }
-    
-    // GUI initialization
-    {
-
-        Gui::InitInfo guiInitInfo{}; 
-        guiInitInfo.hwnd               = inst->wind.hwnd;
-        guiInitInfo.instance           = inst->rend.instance;
-        guiInitInfo.physicalDevice     = inst->rend.physicalDevice;
-        guiInitInfo.device             = inst->rend.device;
-        guiInitInfo.graphicsQueueIndex = inst->rend.graphicsQueueIndex;
-        guiInitInfo.graphicsQueue      = inst->rend.graphicsQueue;
-        guiInitInfo.descriptorPool     = inst->rend.descriptorPool;
-        guiInitInfo.renderPass         = inst->rend.renderPass;
-        guiInitInfo.subpass            = 0;
-        guiInitInfo.imageCount         = inst->rend.imageCount;
-
-        Gui::init(&guiInitInfo, &inst->gui.guiSizes, inst->wind.dpi); 
-
-    }
 
     // Viewports Renderer creation
     {
@@ -596,8 +582,8 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
             rasterizer.rasterizerDiscardEnable = VK_FALSE;
             rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
             rasterizer.lineWidth = 1.0f;
-            rasterizer.cullMode = VK_CULL_MODE_NONE;
-            rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+            rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
             rasterizer.depthBiasEnable = VK_FALSE;
 
             VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -725,6 +711,63 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
     }
 
+    // GUI initialization
+    {
+
+        Gui::InitInfo guiInitInfo{}; 
+        guiInitInfo.hwnd               = inst->wind.hwnd;
+        guiInitInfo.instance           = inst->rend.instance;
+        guiInitInfo.physicalDevice     = inst->rend.physicalDevice;
+        guiInitInfo.device             = inst->rend.device;
+        guiInitInfo.graphicsQueueIndex = inst->rend.graphicsQueueIndex;
+        guiInitInfo.graphicsQueue      = inst->rend.graphicsQueue;
+        guiInitInfo.descriptorPool     = inst->rend.descriptorPool;
+        guiInitInfo.renderPass         = inst->rend.renderPass;
+        guiInitInfo.subpass            = 0;
+        guiInitInfo.imageCount         = inst->rend.imageCount;
+
+        Gui::init(&guiInitInfo, &inst->gui.guiSizes, inst->wind.dpi); 
+ 
+        
+
+        NSVGimage* image = nsvgParseFromFile("Logo.svg", "px", 96);
+        assert(image != NULL && "Failed to open or read Logo.svg");
+
+        scopedTimer(t2, &inst->gui.stats.perfTimes.logoRasterize);
+
+        struct NSVGrasterizer* rast = nsvgCreateRasterizer();
+        inst->gui.logoSize.x = floorf(0.35f * inst->wind.m_size.y);
+        inst->gui.logoSize.y = inst->gui.logoSize.x; 
+        int width = (int)inst->gui.logoSize.x;
+        int height = width;
+        unsigned char* logoImg = (unsigned char*)malloc(width * height * 4);
+        nsvgRasterize(rast, image, 0, 0, inst->gui.logoSize.x / 100.0f, logoImg, width, height, width * 4);
+
+        nsvgDeleteRasterizer(rast); 
+
+        vlknh::TextureImageCreateInfo texImageInfo{};
+        texImageInfo.physicalDevice      = inst->rend.physicalDevice;
+        texImageInfo.commandPool         = inst->rend.commandPool; 
+        texImageInfo.graphicsQueue       = inst->rend.graphicsQueue; 
+        texImageInfo.descriptorPool      = inst->rend.descriptorPool;
+        texImageInfo.descriptorSetLayout = inst->vpRend.descriptorSetLayout;
+        texImageInfo.sampler             = inst->vpRend.frameSampler; 
+        texImageInfo.imageSize           = { (uint32_t)width, (uint32_t)height };
+        texImageInfo.pPixelData          = logoImg; 
+
+        vlknh::TextureImageResources texImgResources{};
+        texImgResources.pTexImg           = &inst->vpRend.logoImg;
+        texImgResources.pTexImgMem        = &inst->vpRend.logoImgMem;
+        texImgResources.pTexImgView       = &inst->vpRend.logoImgView;
+
+        inst->gui.logoTexID = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources); 
+
+        free(logoImg); 
+
+        
+
+    }
+
     // All init code goes above this function. 
     ShowWindow(inst->wind.hwnd, initInfo->nCmdShow);
      
@@ -797,10 +840,10 @@ void App::render(Core::Instance* inst) {
             mload::openModel(fileName, &vertices, &indices);
 
             Core::VertexIndexBuffersInfo buffsInfo{};
-            buffsInfo.vertexData = vertices.data();
+            buffsInfo.vertexData     = vertices.data();
             buffsInfo.vertexDataSize = vertices.size() * sizeof mload::Vertex;
-            buffsInfo.indexData = indices.data();
-            buffsInfo.indexDataSize = indices.size() * sizeof uint32_t;
+            buffsInfo.indexData      = indices.data();
+            buffsInfo.indexDataSize  = indices.size() * sizeof uint32_t;
 
             inst->vpRend.vpInstances.push_back({});
             Core::ViewportInstance& newVpInstance = inst->vpRend.vpInstances.back();
@@ -818,6 +861,7 @@ void App::render(Core::Instance* inst) {
             inst->gui.vpDatas.push_back({});
             Gui::ViewportGuiData& newVpData = inst->gui.vpDatas.back();
             newVpData.open = true;
+            newVpData.zoomDistance = -10.0f;
             newVpData.framebufferTexID = (ImTextureID)newVpInstance.descriptorSet;
 
             newVpData.objectName.reset(new char[(int)(i - fileTitle) + 1]);
@@ -1145,9 +1189,11 @@ void App::render(Core::Instance* inst) {
 
             
             PushConstants pushConstants; 
-            pushConstants.model = glm::eulerAngleXY(vpData.orbitAngle.x, vpData.orbitAngle.y);
-            pushConstants.view  = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -20.0f));
-            pushConstants.proj  = glm::perspective(glm::radians(45.0f), vpData.m_size.x / vpData.m_size.y, 0.1f, 50.0f);
+            pushConstants.view  = glm::translate(glm::mat4(1.0f), vpData.cameraPos); 
+            pushConstants.view  = glm::eulerAngleXY(vpData.orbitAngle.x, vpData.orbitAngle.y) * pushConstants.view;
+            pushConstants.view  = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, vpData.zoomDistance)) * pushConstants.view;
+            pushConstants.proj  = glm::perspective(glm::radians(45.0f), vpData.m_size.x / vpData.m_size.y, 0.01f, 50.0f);
+
 
             vkCmdPushConstants(inst->rend.commandBuff, inst->vpRend.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof pushConstants, &pushConstants);
 
@@ -1263,6 +1309,9 @@ void App::close(Core::Instance* inst) {
 
     Gui::destroy(); 
 
+    vkDestroyImageView     (inst->rend.device, inst->vpRend.logoImgView,       nullptr);
+    vkDestroyImage         (inst->rend.device, inst->vpRend.logoImg,           nullptr);
+    vkFreeMemory           (inst->rend.device, inst->vpRend.logoImgMem,        nullptr);
     vkDestroyFence         (inst->rend.device, inst->rend.frameFinishedFence,  nullptr);
     vkDestroySemaphore     (inst->rend.device, inst->rend.renderDoneSemaphore, nullptr);
     vkDestroySemaphore     (inst->rend.device, inst->rend.imageReadySemaphore, nullptr);

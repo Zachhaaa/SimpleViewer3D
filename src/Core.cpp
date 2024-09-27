@@ -158,7 +158,7 @@ void Core::createVertexIndexBuffers(Instance* inst, ViewportInstance* vpInst, Ve
 
         vlknh::BufferCreateInfo buffInfo{};
         buffInfo.physicalDevice = inst->rend.physicalDevice;
-        buffInfo.m_size           = buffsInfo->vertexDataSize;
+        buffInfo.size           = buffsInfo->vertexDataSize;
         buffInfo.usage          = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         buffInfo.properties     = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -176,7 +176,7 @@ void Core::createVertexIndexBuffers(Instance* inst, ViewportInstance* vpInst, Ve
 
         vlknh::BufferCreateInfo buffInfo{};
         buffInfo.physicalDevice = inst->rend.physicalDevice;
-        buffInfo.m_size           = buffsInfo->indexDataSize;
+        buffInfo.size           = buffsInfo->indexDataSize;
         buffInfo.usage          = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         buffInfo.properties     = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 

@@ -47,11 +47,12 @@ struct InitInfo {
 
 struct GuiSizes {
 
-	float fontSize = 16.0;
-	float titleBarHeight = 28.0;
-	float wndBtnWidth = 40.0f;
+	float fontSize           = 16.0f;
+	float largeFontSize      = 28.0f;
+	float titleBarHeight     = 28.0f;
+	float wndBtnWidth        = 40.0f;
 	float menuBarStartExtent = 12.0f;
-	float menuBarEndExtent = 44.0f;
+	float menuBarEndExtent   = 76.0f;
 		
 };
 
@@ -61,6 +62,7 @@ struct PerformanceTimes {
 	float fileClose;
 	float viewportResize;
 	float appLaunch;
+	float logoRasterize; 
 	float renderingCommands;
 
 };
@@ -79,19 +81,25 @@ struct ViewportGuiData {
 	bool        visible; 
 	bool        resize;
 	bool        orbitActive;
+	bool        panActive;
 	std::unique_ptr<char[]> objectName;
 	glm::vec2   orbitAngle;
+	glm::vec3   cameraPos;
+	float       zoomDistance;
 	ImVec2      m_size;
 	ImTextureID framebufferTexID; 
 	uint32_t    triangleCount;
 
 };
 
+
 struct DrawData {
 
-	GuiSizes            guiSizes;
+	GuiSizes    guiSizes;
+	ImTextureID logoTexID; 
+	ImVec2      logoSize;
 #ifdef DEVINFO
-	DisplayData         stats{};
+	DisplayData stats{};
 #endif
 	std::vector<ViewportGuiData> vpDatas;
 
