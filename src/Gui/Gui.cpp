@@ -276,43 +276,42 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
 
             ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
 
-            if (currentVpSize.x > 0.0 && currentVpSize.y > 0.0) vpData.visible = true;
-            else goto ContentNotVisible;
+            if (currentVpSize.x > 0.0 && currentVpSize.y > 0.0)
+            {
+                vpData.visible = true;
 
-            if (vpData.m_size != currentVpSize) { 
-                vpData.resize = true; 
-                vpData.m_size = currentVpSize; 
+                if (vpData.m_size != currentVpSize) { 
+                    vpData.resize = true; 
+                    vpData.m_size = currentVpSize; 
+                }
+                ImGui::Image(vpData.framebufferTexID, vpData.m_size);
+
+                if (ImGui::IsWindowHovered()) {
+                    vpData.zoomDistance += io.MouseWheel; 
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) vpData.orbitActive = true;
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) vpData.panActive   = true;
+
+                }
+                if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))  vpData.orbitActive = false;
+                if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) vpData.panActive   = false;
+
+                constexpr float c_sensitivity = 0.005;
+                if (vpData.orbitActive) {
+                    vpData.orbitAngle  += glm::vec2(-c_sensitivity * io.MouseDelta.y, c_sensitivity * io.MouseDelta.x);
+                    vpData.orbitAngle.x = glm::clamp(vpData.orbitAngle.x, glm::radians(-90.0f), glm::radians(90.0f));
+                }
+                if (vpData.panActive) {
+                    float cosx = cosf(vpData.orbitAngle.x);
+                    float sinx = sinf(vpData.orbitAngle.x);
+                    float cosy = cosf(vpData.orbitAngle.y);
+                    float siny = sinf(vpData.orbitAngle.y);
+                    glm::vec3 panDelta;
+                    panDelta  = io.MouseDelta.x * glm::vec3(cosy, 0.0f, siny); 
+                    panDelta += io.MouseDelta.y * glm::vec3(sinx * siny, cosx, -sinx * cosy); 
+                    panDelta *= c_sensitivity; 
+                    vpData.cameraPos += panDelta;
+                }
             }
-            ImVec2 min = ImGui::GetCursorPos(); 
-            ImGui::Image(vpData.framebufferTexID, vpData.m_size);
-
-            if (ImGui::IsWindowHovered()) {
-                vpData.zoomDistance += io.MouseWheel; 
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) vpData.orbitActive = true;
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) vpData.panActive   = true;
-
-            }
-            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))  vpData.orbitActive = false;
-            if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) vpData.panActive   = false;
-
-            constexpr float c_sensitivity = 0.005;
-            if (vpData.orbitActive) {
-                vpData.orbitAngle  += glm::vec2(-c_sensitivity * io.MouseDelta.y, c_sensitivity * io.MouseDelta.x);
-                vpData.orbitAngle.x = glm::clamp(vpData.orbitAngle.x, glm::radians(-90.0f), glm::radians(90.0f));
-            }
-            if (vpData.panActive) {
-                float cosx = cosf(vpData.orbitAngle.x);
-                float sinx = sinf(vpData.orbitAngle.x);
-                float cosy = cosf(vpData.orbitAngle.y);
-                float siny = sinf(vpData.orbitAngle.y);
-                glm::vec3 panDelta;
-                panDelta  = io.MouseDelta.x * glm::vec3(cosy, 0.0f, siny); 
-                panDelta += io.MouseDelta.y * glm::vec3(sinx * siny, cosx, -sinx * cosy); 
-                panDelta *= c_sensitivity; 
-                vpData.cameraPos += panDelta;
-            }
-            ContentNotVisible:;
-
         }
         ImGui::End();
 
