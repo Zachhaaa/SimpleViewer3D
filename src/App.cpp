@@ -5,6 +5,9 @@
 
 #include <VulkanHelpers.hpp>
 
+#include "FileArrays/shader_vert_spv.h"
+#include "FileArrays/shader_frag_spv.h"
+
 #ifndef DEVINFO
 #define DISABLE_SCOPEDTIMER
 #endif
@@ -529,14 +532,30 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
             VkPipelineShaderStageCreateInfo shaderStages[2]{};
 
-            VkShaderModule vertModule = vlknh::createShaderModule(inst->rend.device, "res/shaders/shader.vert.spv");
+            VkShaderModuleCreateInfo vertModuleCreateInfo{};
+            vertModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            vertModuleCreateInfo.codeSize = sizeof(shader_vert_spv);
+            vertModuleCreateInfo.pCode    = (uint32_t*)shader_vert_spv;
+
+            VkShaderModule vertModule;
+            VkResult err = vkCreateShaderModule(inst->rend.device, &vertModuleCreateInfo, nullptr, &vertModule);
+            CORE_ASSERT(err == VK_SUCCESS && "Vertex Module Creation failed");
+
             shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             shaderStages[0].flags = 0;
             shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
             shaderStages[0].module = vertModule;
             shaderStages[0].pName = "main";
 
-            VkShaderModule fragModule = vlknh::createShaderModule(inst->rend.device, "res/shaders/shader.frag.spv");
+            VkShaderModuleCreateInfo fragModuleCreateInfo{};
+            fragModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            fragModuleCreateInfo.codeSize = sizeof(shader_frag_spv);
+            fragModuleCreateInfo.pCode = (uint32_t*)shader_frag_spv;
+
+            VkShaderModule fragModule;
+            err = vkCreateShaderModule(inst->rend.device, &fragModuleCreateInfo, nullptr, &fragModule);
+            CORE_ASSERT(err == VK_SUCCESS && "Vertex Module Creation failed");
+
             shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             shaderStages[1].flags = 0;
             shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -630,7 +649,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
             pipelineLayoutInfo.pushConstantRangeCount = 1;
             pipelineLayoutInfo.pPushConstantRanges    = &pcRange;
 
-            VkResult err = vkCreatePipelineLayout(inst->rend.device, &pipelineLayoutInfo, nullptr, &inst->vpRend.pipelineLayout);
+            err = vkCreatePipelineLayout(inst->rend.device, &pipelineLayoutInfo, nullptr, &inst->vpRend.pipelineLayout);
             CORE_ASSERT(err == VK_SUCCESS && "Failed to create pipeline layout");
 
             VkGraphicsPipelineCreateInfo pipelineInfo{};

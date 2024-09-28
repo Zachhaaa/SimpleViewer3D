@@ -18,6 +18,11 @@ project "SimpleViewer3Dapp"
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
     links       { "vulkan-1", "Shcore"}
 
+    os.execute "touch src/FileArrays/shader_frag_spv.cpp"
+    os.execute "touch src/FileArrays/shader_frag_spv.h"
+    os.execute "touch src/FileArrays/shader_vert_spv.cpp"
+    os.execute "touch src/FileArrays/shader_vert_spv.h"
+
     files {
         "src/**.cpp", 
         "src/**.hpp", 
@@ -41,6 +46,7 @@ project "SimpleViewer3Dapp"
         "Dependencies/imgui/backends/imgui_impl_win32.cpp",
         "Dependencies/imgui/backends/imgui_impl_win32.h",
         "Dependencies/glm/glm/**.hpp",
+
     }
 
     defines     { "_CRT_SECURE_NO_WARNINGS" }
@@ -52,7 +58,7 @@ project "SimpleViewer3Dapp"
 
     filter "files:**.vert or files:**.frag"
         buildmessage "Compiling shader: %{file.relpath}"
-        buildcommands "glslc %{file.relpath} -o res/shaders/%{file.name}.spv -O"
+        buildcommands { "glslc %{file.relpath} -o res/shaders/%{file.name}.spv -O", "python FileToArray.py res/shaders/%{file.name}.spv src/FileArrays/" } 
         buildoutputs  "res/shaders/%{file.name}.spv"
     
     -- Standard Debug mode
