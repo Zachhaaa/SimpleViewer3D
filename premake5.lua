@@ -1,13 +1,17 @@
-workspace "SimpleViewer3D" 
+workspace "Simple Viewer 3D" 
     configurations { "Debug", "OptDebug", "DevRelease", "Dist" }
     platforms      { "x64" }
 
-project "SimpleViewer3Dapp"
+project "Simple Viewer 3D"
     kind       "WindowedApp"
     language   "C++"
     cppdialect "C++17"
     targetdir  "bin/%{cfg.buildcfg}" 
     objdir     "bin/obj"
+
+    if not os.isdir "bin/shaderObjs" then
+        os.execute "mkdir bin\\shaderObjs"
+    end
 
     includedirs {
         "%{os.getenv('VULKAN_SDK')}/include",
@@ -18,10 +22,12 @@ project "SimpleViewer3Dapp"
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
     links       { "vulkan-1", "Shcore"}
 
-    os.execute "touch src/FileArrays/shader_frag_spv.cpp"
+    -- So these files are actually included in the compile list
+    -- The actual code for these files is generated when compiling the shaders
     os.execute "touch src/FileArrays/shader_frag_spv.h"
-    os.execute "touch src/FileArrays/shader_vert_spv.cpp"
+    os.execute "touch src/FileArrays/shader_frag_spv.cpp"
     os.execute "touch src/FileArrays/shader_vert_spv.h"
+    os.execute "touch src/FileArrays/shader_vert_spv.cpp"
 
     files {
         "src/**.cpp", 
@@ -29,24 +35,15 @@ project "SimpleViewer3Dapp"
         "src/**.h", 
         "src/shaders/**.vert", 
         "src/shaders/**.frag",
-        "Dependencies/**.cpp",
-        "Dependencies/**.hpp",
-    }
-    removefiles {
-        "Dependencies/imgui/**.cpp",
-        "Dependencies/imgui/**.h",
-        "Dependencies/glm/**.cpp",
-        "Dependencies/glm/**.hpp",
-    }
-    files {
-        "Dependencies/imgui/*.cpp",
-        "Dependencies/imgui/*.h",
+        "Dependencies/*/*.cpp",
+        "Dependencies/*/*.hpp",
+        "Dependencies/*/*.c",
+        "Dependencies/*/*.h",
+        "Dependencies/imgui/backends/imgui_impl_win32.h",
         "Dependencies/imgui/backends/imgui_impl_vulkan.cpp",
         "Dependencies/imgui/backends/imgui_impl_vulkan.h",
         "Dependencies/imgui/backends/imgui_impl_win32.cpp",
-        "Dependencies/imgui/backends/imgui_impl_win32.h",
         "Dependencies/glm/glm/**.hpp",
-
     }
 
     defines     { "_CRT_SECURE_NO_WARNINGS" }
@@ -56,10 +53,18 @@ project "SimpleViewer3Dapp"
 
     staticruntime "On"
 
+
     filter "files:**.vert or files:**.frag"
         buildmessage "Compiling shader: %{file.relpath}"
-        buildcommands { "glslc %{file.relpath} -o res/shaders/%{file.name}.spv -O", "python FileToArray.py res/shaders/%{file.name}.spv src/FileArrays/" } 
-        buildoutputs  "res/shaders/%{file.name}.spv"
+        buildcommands { 
+            "glslc %{file.relpath} -o bin/shaderObjs/%{file.name}.spv -O", 
+            "python FileToArray.py bin/shaderObjs/%{file.name}.spv src/FileArrays/" 
+        } 
+        buildoutputs {
+            "bin/shaderObjs/%{file.name}.spv",
+            "src/FileArrays/*.cpp",
+            "src/FileArrays/*.h",
+        }
     
     -- Standard Debug mode
     filter "configurations:Debug"

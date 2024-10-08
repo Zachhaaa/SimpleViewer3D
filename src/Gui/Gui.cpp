@@ -327,4 +327,5 @@ void Gui::destroy() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
 }

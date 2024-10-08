@@ -114,7 +114,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "SimpleViewer3D";
+        appInfo.pApplicationName = "Simple Viewer 3D";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "No Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -353,45 +353,45 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
     {
 
         VkAttachmentDescription colorAttachment{};
-        colorAttachment.flags = 0;
-        colorAttachment.format = c_vlkn::format;
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.flags          = 0;
+        colorAttachment.format         = c_vlkn::format;
+        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
         colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount    = 1;
+        subpass.pColorAttachments       = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = nullptr;
-        subpass.pResolveAttachments = nullptr;
+        subpass.pResolveAttachments     = nullptr;
 
         VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass    = 0;
+        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
         VkAttachmentDescription attachments[] = { colorAttachment };
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.flags = 0;
+        renderPassInfo.flags           = 0;
         renderPassInfo.attachmentCount = arraySize(attachments);
-        renderPassInfo.pAttachments = attachments;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.pAttachments    = attachments;
+        renderPassInfo.subpassCount    = 1;
+        renderPassInfo.pSubpasses      = &subpass;
         renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
+        renderPassInfo.pDependencies   = &dependency;
 
         VkResult err = vkCreateRenderPass(inst->rend.device, &renderPassInfo, nullptr, &inst->rend.renderPass);
         CORE_ASSERT(err == VK_SUCCESS && "Render pass creation failed");
@@ -712,19 +712,20 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
         {
 
             VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-            samplerLayoutBinding.binding = 0;
-            samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            samplerLayoutBinding.descriptorCount = 1;
-            samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            samplerLayoutBinding.binding            = 0;
+            samplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            samplerLayoutBinding.descriptorCount    = 1;
+            samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
             samplerLayoutBinding.pImmutableSamplers = nullptr;
 
             VkDescriptorSetLayoutCreateInfo layoutInfo{};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layoutInfo.flags = 0;
+            layoutInfo.flags        = 0;
             layoutInfo.bindingCount = 1;
-            layoutInfo.pBindings = &samplerLayoutBinding;
+            layoutInfo.pBindings    = &samplerLayoutBinding;
 
-            vkCreateDescriptorSetLayout(inst->rend.device, &layoutInfo, nullptr, &inst->vpRend.descriptorSetLayout);
+            VkResult err = vkCreateDescriptorSetLayout(inst->rend.device, &layoutInfo, nullptr, &inst->vpRend.descriptorSetLayout);
+            CORE_ASSERT(err == VK_SUCCESS && "Descriptor set layout creation failed");
 
         }
 
@@ -781,6 +782,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
         inst->gui.logoTexID = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources); 
 
+        free(image); 
         free(logoImg); 
 
         
