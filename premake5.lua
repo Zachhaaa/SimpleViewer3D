@@ -51,9 +51,6 @@ project "Simple Viewer 3D"
     floatingpoint    "Fast"
     vectorextensions "AVX2"
 
-    staticruntime "On"
-
-
     filter "files:**.vert or files:**.frag"
         buildmessage "Compiling shader: %{file.relpath}"
         buildcommands { 
