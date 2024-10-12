@@ -85,7 +85,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
         inst->wind.hwnd = CreateWindowEx(
             0,
             CLASS_NAME,
-            L"Vulkan App",
+            L"Simple Viewer 3D",
             WS_OVERLAPPEDWINDOW,
             startPosX,
             startPosY,
