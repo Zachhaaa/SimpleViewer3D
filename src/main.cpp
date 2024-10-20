@@ -1,11 +1,11 @@
 #include "App.hpp"
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
 
 	Core::Instance mainInstance;
-	App::InstanceInfo initInfo = { hInstance, nCmdShow }; 
+	App::InstanceInfo initInfo = { hInstance, nCmdShow, pCmdLine }; 
 
-	App::init(&mainInstance, &initInfo);
+	App::init(&mainInstance, initInfo);
 
 	while (true) {
 		

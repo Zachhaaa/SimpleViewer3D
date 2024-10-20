@@ -1,6 +1,8 @@
 #include "App.hpp"
 #include "CoreConstants.hpp"
 
+#include <ModelLoader.hpp>
+
 #include <VulkanHelpers.hpp>
 
 #include <algorithm>
@@ -148,7 +150,7 @@ void Core::recreateSwapchain(Instance* inst) {
 
 }
 
-void Core::createVertexIndexBuffers(Instance* inst, ViewportInstance* vpInst, VertexIndexBuffersInfo* buffsInfo) {
+void Core::createGeometryData(Instance* inst, ViewportInstance* vpInst, VertexIndexBuffersInfo* buffsInfo) {
 
     VkBuffer       vertStageBuff, indexStageBuff;
     VkDeviceMemory vertStageMem,  indexStageMem;
@@ -204,6 +206,370 @@ void Core::createVertexIndexBuffers(Instance* inst, ViewportInstance* vpInst, Ve
     vkDestroyBuffer     (inst->rend.device, indexStageBuff, nullptr);
 
 }
+void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, const VkExtent2D size) {
+
+    // Image creation
+    {
+
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.flags = 0;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.format = c_vlkn::format;
+        imageInfo.extent = { size.width, size.height, 1 };
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.queueFamilyIndexCount = 1;
+        imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInst->image);
+        CORE_ASSERT(err == VK_SUCCESS && "Image creation failed");
+
+    }
+
+    // Image memory creation
+    {
+
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(inst->rend.device, vpInst->image, &memRequirements);
+        VkPhysicalDeviceMemoryProperties memProps;
+        vkGetPhysicalDeviceMemoryProperties(inst->rend.physicalDevice, &memProps);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+
+        uint32_t i = 0;
+        for (; i < memProps.memoryTypeCount; i++) {
+            if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                break;
+            }
+        }
+
+        allocInfo.memoryTypeIndex = i;
+        VkResult err = vkAllocateMemory(inst->rend.device, &allocInfo, nullptr, &vpInst->imageMem);
+        CORE_ASSERT(err == VK_SUCCESS && "Buffer allocation failed");
+
+        vkBindImageMemory(inst->rend.device, vpInst->image, vpInst->imageMem, 0);
+
+    }
+
+    // Image view creation
+    {
+
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.flags = 0;
+        createInfo.image = vpInst->image;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = c_vlkn::format;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInst->imageView);
+        CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
+
+    }
+
+    // Color image creation
+    {
+
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.flags = 0;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.format = c_vlkn::format;
+        imageInfo.extent = { size.width, size.height, 1 };
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.samples = c_vlkn::sampleCount;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.queueFamilyIndexCount = 1;
+        imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInst->colorImage);
+        CORE_ASSERT(err == VK_SUCCESS && "Image creation failed");
+
+    }
+
+    // Color image memory creation
+    {
+
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(inst->rend.device, vpInst->colorImage, &memRequirements);
+        VkPhysicalDeviceMemoryProperties memProps;
+        vkGetPhysicalDeviceMemoryProperties(inst->rend.physicalDevice, &memProps);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+
+        uint32_t i = 0;
+        for (; i < memProps.memoryTypeCount; i++) {
+            if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                break;
+            }
+        }
+
+        allocInfo.memoryTypeIndex = i;
+        VkResult err = vkAllocateMemory(inst->rend.device, &allocInfo, nullptr, &vpInst->colorImageMem);
+        CORE_ASSERT(err == VK_SUCCESS && "Buffer allocation failed");
+
+        vkBindImageMemory(inst->rend.device, vpInst->colorImage, vpInst->colorImageMem, 0);
+
+    }
+
+    // Color image view creation
+    {
+
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.flags = 0;
+        createInfo.image = vpInst->colorImage;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = c_vlkn::format;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInst->colorImageView);
+        CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
+
+    }
+
+    // Depth image creation
+    {
+
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.flags = 0;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.format = c_vlkn::depthFormat;
+        imageInfo.extent = { size.width, size.height, 1 };
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.samples = c_vlkn::sampleCount;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.queueFamilyIndexCount = 1;
+        imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInst->depthImage);
+        CORE_ASSERT(err == VK_SUCCESS && "Depth image creation failed");
+
+    }
+
+    // Image memory creation
+    {
+
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(inst->rend.device, vpInst->depthImage, &memRequirements);
+        VkPhysicalDeviceMemoryProperties memProps;
+        vkGetPhysicalDeviceMemoryProperties(inst->rend.physicalDevice, &memProps);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+
+        uint32_t i = 0;
+        for (; i < memProps.memoryTypeCount; i++) {
+            if (memRequirements.memoryTypeBits & (1 << i) && memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                break;
+            }
+        }
+
+        allocInfo.memoryTypeIndex = i;
+        VkResult err = vkAllocateMemory(inst->rend.device, &allocInfo, nullptr, &vpInst->depthImageMem);
+        CORE_ASSERT(err == VK_SUCCESS && "Buffer allocation failed");
+
+        vkBindImageMemory(inst->rend.device, vpInst->depthImage, vpInst->depthImageMem, 0);
+
+    }
+
+    // Depth image view creation
+    {
+
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.flags = 0;
+        createInfo.image = vpInst->depthImage;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = c_vlkn::depthFormat;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInst->depthImageView);
+        CORE_ASSERT(err == VK_SUCCESS && "Depth image view creation failed");
+
+    }
+
+    // Update Descriptor Set
+    {
+
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.sampler     = inst->vpRend.frameSampler;
+        imageInfo.imageView   = vpInst->imageView;
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet writeDescriptor{};
+        writeDescriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptor.dstSet = vpInst->descriptorSet;
+        writeDescriptor.dstBinding = 0;
+        writeDescriptor.dstArrayElement = 0;
+        writeDescriptor.descriptorCount = 1;
+        writeDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeDescriptor.pImageInfo = &imageInfo;
+
+        vkUpdateDescriptorSets(inst->rend.device, 1, &writeDescriptor, 0, nullptr);
+
+    }
+
+    // Framebuffer creation
+    {
+
+        VkImageView attachments[] = { vpInst->colorImageView, vpInst->depthImageView, vpInst->imageView };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = inst->vpRend.renderPass;
+        framebufferInfo.attachmentCount = arraySize(attachments);
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = size.width;
+        framebufferInfo.height = size.height;
+        framebufferInfo.layers = 1;
+
+        VkResult err = vkCreateFramebuffer(inst->rend.device, &framebufferInfo, nullptr, &vpInst->framebuffer);
+        CORE_ASSERT(err == VK_SUCCESS && "Frambuffer creation failed");
+
+    }
+
+}
+bool Core::openMeshFile(Instance* inst, const char* file) {
+
+    scopedTimer(t1, &inst->gui.stats.perfTimes.openFile);
+    if (file == nullptr) return false;
+    if (file[0] == '\0') return false;
+    const char* fileTitle;
+    const char* i = file;
+    for (; *i != '\0'; ++i)
+        if (*i == '/' || *i == '\\') fileTitle = i + 1;
+
+    // Early out if window already exists
+    for (Gui::ViewportGuiData& vpData : inst->gui.vpDatas) {
+        if (strcmp(vpData.objectName.get(), fileTitle) == 0) {
+            ImGui::SetWindowFocus(vpData.objectName.get()); 
+            return false;
+        }
+    }
+
+    vkQueueWaitIdle(inst->rend.graphicsQueue);
+
+    std::vector<mload::Vertex> vertices;
+    std::vector<uint32_t>      indices;
+
+    bool isTextFormat;
+    if (!mload::openModel(file, &vertices, &indices, &isTextFormat)) return false;
+
+    Core::VertexIndexBuffersInfo buffsInfo{};
+    buffsInfo.vertexData = vertices.data();
+    buffsInfo.vertexDataSize = vertices.size() * sizeof mload::Vertex;
+    buffsInfo.indexData = indices.data();
+    buffsInfo.indexDataSize = indices.size() * sizeof uint32_t;
+
+    inst->vpRend.vpInstances.push_back({});
+    Core::ViewportInstance& newVpInstance = inst->vpRend.vpInstances.back();
+    Core::createGeometryData(inst, &newVpInstance, &buffsInfo);
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = inst->rend.descriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &inst->vpRend.descriptorSetLayout;
+
+    VkResult err = vkAllocateDescriptorSets(inst->rend.device, &allocInfo, &newVpInstance.descriptorSet);
+    CORE_ASSERT(err == VK_SUCCESS && "Descriptor set creation failed");
+
+    inst->gui.vpDatas.push_back({});
+    Gui::ViewportGuiData& newVpData = inst->gui.vpDatas.back();
+    newVpData.open = true;
+    newVpData.model = glm::mat4(1.0f);
+    newVpData.framebufferTexID = (ImTextureID)newVpInstance.descriptorSet;
+
+    float farthestReachingVertex = 0.0f;
+    for (mload::Vertex& vertex : vertices) {
+        glm::vec3 pos(vertex.pos.x, vertex.pos.y, vertex.pos.z);
+        newVpData.modelCenter += pos;
+        float magnitude = glm::length(pos);
+        if (magnitude > farthestReachingVertex) farthestReachingVertex = magnitude;
+
+    }
+    newVpData.modelCenter /= (float)vertices.size();
+    newVpData.zoomDistance = -2.5f * farthestReachingVertex;
+    newVpData.farPlaneClip = -30.0f * newVpData.zoomDistance;
+    newVpData.zoomMin = -newVpData.farPlaneClip / 3;
+
+    newVpData.objectName.reset(new char[(int)(i - fileTitle) + 1]);
+    strcpy(newVpData.objectName.get(), fileTitle);
+    newVpData.triangleCount = (uint32_t)indices.size();
+    newVpData.uniqueTriangleCount = (uint32_t)vertices.size();
+    newVpData.isTextFormat = isTextFormat;
+
+    return true;
+
+}
+void Core::destroyGeometryData(VkDevice device, ViewportInstance* vpInst) {
+
+    vkFreeMemory         (device, vpInst->indexBuffMem,   nullptr);
+    vkDestroyBuffer      (device, vpInst->indexBuff,      nullptr);
+    vkFreeMemory         (device, vpInst->vertBuffMem,    nullptr);
+    vkDestroyBuffer      (device, vpInst->vertBuff,       nullptr);
+
+}
+void Core::destroyVpImageResources(VkDevice device, ViewportInstance* vpInst) {
+
+    vkDestroyFramebuffer (device, vpInst->framebuffer,    nullptr);
+    vkDestroyImageView   (device, vpInst->depthImageView, nullptr);
+    vkFreeMemory         (device, vpInst->depthImageMem,  nullptr);
+    vkDestroyImage       (device, vpInst->depthImage,     nullptr);
+    vkDestroyImageView   (device, vpInst->colorImageView, nullptr);
+    vkFreeMemory         (device, vpInst->colorImageMem,  nullptr);
+    vkDestroyImage       (device, vpInst->colorImage,     nullptr);
+    vkDestroyImageView   (device, vpInst->imageView,      nullptr);
+    vkFreeMemory         (device, vpInst->imageMem,       nullptr);
+    vkDestroyImage       (device, vpInst->image,          nullptr);
+
+}
+
 
 VkResult Core::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -238,7 +604,11 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
         RECT windowRect;
         GetClientRect(hwnd, &windowRect);
         // Check if the cursor is in a corner or edge for resizing
-        if (mpos.y < inst->gui.guiSizes.titleBarHeight && mpos.y >= borderWidth && mpos.x > inst->gui.guiSizes.menuBarEndExtent && mpos.x < windowRect.right - 3 * inst->gui.guiSizes.wndBtnWidth ) {
+        if (
+            mpos.y < inst->gui.styleEx.sizes.titleBarHeight && 
+            mpos.y >= borderWidth && 
+            mpos.x > inst->gui.styleEx.sizes.menuBarEndExtent && 
+            mpos.x < windowRect.right - 3 * inst->gui.styleEx.sizes.wndBtnWidth ) {
             return HTCAPTION;
         }
         else if (mpos.y < borderWidth && mpos.x < borderWidth) {
@@ -290,10 +660,6 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
         return 0; 
 
-    }
-    case WM_KEYDOWN: {
-        if (wParam == VK_ESCAPE) PostQuitMessage(0);
-        return 0;
     }
     case WM_GETMINMAXINFO: {
         LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;

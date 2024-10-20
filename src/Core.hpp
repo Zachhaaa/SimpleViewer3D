@@ -14,11 +14,17 @@
 
 #include <glm/glm.hpp>
 
+#ifndef DEVINFO
+#define DISABLE_SCOPEDTIMER
+#endif
+
+#include <Timer.hpp>
+
 #include <vector>
 
 // macros
 #define arraySize(array) (sizeof(array) / sizeof(array[0]))
-#define CORE_ASSERT(exp) assert(exp);
+#define CORE_ASSERT(exp) assert(exp); // to quickly change the assert function if anyone wishes todo so.
 
 namespace Core {
 
@@ -53,8 +59,6 @@ struct VlknRenderInstance {
     VkCommandPool            commandPool;
     VkCommandBuffer          commandBuff;
     VkDescriptorPool         descriptorPool;
-    //uint32_t                 maxDescriptorSets;
-    //uint32_t                 setCount;
     VkSemaphore              renderDoneSemaphore;
     VkSemaphore              imageReadySemaphore;
     VkFence                  frameFinishedFence;
@@ -62,13 +66,16 @@ struct VlknRenderInstance {
 
 };
 
-// NOT imgui viewport as in a separate window.This is where the 3D model is drawn.
+// NOT imgui viewport as in a separate window. This is where the mesh is drawn.
 struct ViewportInstance {
 
     VkImage                 image;
     VkDeviceMemory          imageMem;
     VkImageView             imageView;
     VkFramebuffer           framebuffer;
+    VkImage                 colorImage;
+    VkDeviceMemory          colorImageMem;
+    VkImageView             colorImageView;
     VkImage                 depthImage;
     VkDeviceMemory          depthImageMem;
     VkImageView             depthImageView;
@@ -77,7 +84,7 @@ struct ViewportInstance {
     VkBuffer                indexBuff;
     VkDeviceMemory          indexBuffMem;
     VkDescriptorSet         descriptorSet;
-    
+
 };
 
 struct ViewportsRenderInstance {
@@ -90,6 +97,9 @@ struct ViewportsRenderInstance {
     VkImage               logoImg;
     VkDeviceMemory        logoImgMem;
     VkImageView           logoImgView;
+    VkImage               icoImg;
+    VkDeviceMemory        icoImgMem;
+    VkImageView           icoImgView;
     VkDescriptorSet       logoDescriptor;
 
     std::vector<ViewportInstance> vpInstances;
@@ -102,8 +112,7 @@ struct Instance {
     WindowInstance          wind{};
     VlknRenderInstance      rend{};
     ViewportsRenderInstance vpRend{};
-    // DO NOT ZERO the following struct. gui.guiSizes must not be set to zero and must use init values.
-    Gui::DrawData           gui; 
+    Gui::DrawData           gui{};
 
 };
 
@@ -126,7 +135,11 @@ void     createFramebuffers        (VlknRenderInstance* rend);
 void     cleanupSwapchainResources (VlknRenderInstance* rend);
 void     recreateSwapchain         (Instance* inst);
 
-void     createVertexIndexBuffers  (Instance* inst, ViewportInstance* vpInst, VertexIndexBuffersInfo* buffsInfo);
+void     createGeometryData        (Instance* inst, ViewportInstance* vpInst, VertexIndexBuffersInfo* buffsInfo);
+void     createVpImageResources    (Instance* inst, ViewportInstance* vpInst, const VkExtent2D size);
+bool     openMeshFile              (Instance* inst, const char* file);
+void     destroyGeometryData       (VkDevice device, ViewportInstance* vpInst);
+void     destroyVpImageResources   (VkDevice device, ViewportInstance* vpInst);   
 
 VkResult CreateDebugUtilsMessengerEXT  (VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void     DestroyDebugUtilsMessengerEXT (VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks * pAllocator);

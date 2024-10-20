@@ -7,28 +7,29 @@
 
 #include <glm/glm.hpp>
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_vulkan.h>
-#include <imgui_operators.h>
 
 #include <memory>
 #include <vector>
 
 namespace Gui {
 
-enum Commands {
+typedef uint32_t Commands;
+enum _Commands : uint32_t {
 
-	cmd_null,
-	cmd_minimizeWindow,
-	cmd_maximizeWindow,
-	cmd_restoreWindow,
-	cmd_closeWindow,
-	cmd_openDialog,
-
-	cmdCount // Use this for the number of enum values in this enum
+	cmd_minimizeWindowBit = 1 << 0,
+	cmd_maximizeWindowBit = 1 << 2,
+	cmd_restoreWindowBit  = 1 << 3,
+	cmd_closeWindowBit    = 1 << 4,
+	cmd_openDialogBit     = 1 << 5,
+	// When adding new commands, make sure you adjust the c_cmdCount below. 
 
 };
+constexpr size_t c_cmdCount = 5; 
+static_assert(c_cmdCount <= sizeof(Commands) * 8);
 
 struct InitInfo {
 
@@ -47,13 +48,24 @@ struct InitInfo {
 
 struct GuiSizes {
 
-	float fontSize           = 16.0f;
-	float largeFontSize      = 28.0f;
-	float titleBarHeight     = 28.0f;
-	float wndBtnWidth        = 40.0f;
-	float menuBarStartExtent = 12.0f;
-	float menuBarEndExtent   = 76.0f;
-		
+	float fontSize;
+	float largeFontSize;
+	float titleBarHeight;
+	float wndBtnWidth;
+	float menuBarStartExtent;
+	float menuBarEndExtent;
+
+};
+struct GuiColors {
+	ImVec4 shortcutText;
+	ImVec4 mainWndBackground; 
+};
+
+struct GuiStyleEx {
+
+	GuiSizes   sizes;
+	GuiColors  colors;
+
 };
 
 struct PerformanceTimes {
@@ -77,27 +89,35 @@ struct DisplayData {
 
 struct ViewportGuiData {
 
-	bool        open;
-	bool        visible; 
-	bool        resize;
-	bool        orbitActive;
-	bool        panActive;
+	bool                    open;
+	bool                    visible; 
+	bool                    resize;
+	bool                    orbitActive;
+	bool                    panActive;
 	std::unique_ptr<char[]> objectName;
-	glm::vec2   orbitAngle;
-	glm::vec3   cameraPos;
-	float       zoomDistance;
-	ImVec2      m_size;
-	ImTextureID framebufferTexID; 
-	uint32_t    triangleCount;
+	glm::mat4               model;
+	glm::vec3               modelCenter;
+	float                   zoomDistance;
+	float                   zoomMin;
+	float                   farPlaneClip;
+	ImVec2                  size;
+	ImTextureID             framebufferTexID; 
+	uint32_t                triangleCount;
+	uint32_t                uniqueTriangleCount;
+	bool                    isTextFormat; 
+
+	glm::vec2& panPos() { return *(glm::vec2*)&model[3]; }
 
 };
 
-
 struct DrawData {
 
-	GuiSizes    guiSizes;
-	ImTextureID logoTexID; 
-	ImVec2      logoSize;
+	GuiStyleEx       styleEx;
+	ImTextureID      logoTexID; 
+	ImTextureID      icoTexID;
+	ImVec2           logoSize;
+	ViewportGuiData* lastFocusedVp;
+	float            sensitivity; 
 #ifdef DEVINFO
 	DisplayData stats{};
 #endif
@@ -105,8 +125,8 @@ struct DrawData {
 
 };
 
-void init    (InitInfo* initInfo, GuiSizes* guiSizes, float guiDpi);
-void draw    (HWND hwnd, Commands* cmdListPtr, DrawData* data);
+void init    (InitInfo* initInfo, GuiStyleEx* styleEX, float guiDpi);
+void draw    (HWND hwnd, Commands* commands, DrawData* data);
 void destroy (); 
 	
 }

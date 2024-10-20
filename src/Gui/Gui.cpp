@@ -4,6 +4,11 @@
 
 #include <algorithm>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
+
 namespace c_style {
 
     /*
@@ -14,15 +19,16 @@ namespace c_style {
     * col2 = border colors
     * col3 = hover colors
     */
-    constexpr ImVec4 col1      = ImGui::rgba32toVec4(15, 15, 15, 255);
-    constexpr ImVec4 col2      = ImGui::rgba32toVec4(20, 20, 20, 255);
-    constexpr ImVec4 col3      = ImGui::rgba32toVec4(40, 40, 40, 255);
-    constexpr ImVec4 activeCol = ImGui::rgba32toVec4(69, 61, 40, 255);
-    constexpr ImVec4 hoverCol  = ImGui::rgba32toVec4(113, 100, 65, 255);
+    
+    constexpr ImVec4 col1      (0.0588, 0.0588, 0.0588, 1.0); // rgba(15, 15, 15, 255)
+    constexpr ImVec4 col2      (0.0784, 0.0784, 0.0784, 1.0); // rbga(20, 20, 20, 255)
+    constexpr ImVec4 col3      (0.157, 0.157, 0.157, 1.0);    // rgba(40, 40, 40, 255)
+    constexpr ImVec4 activeCol (0.271, 0.239, 0.157, 1.0);    // rgba(69, 61, 40, 255)
+    constexpr ImVec4 hoverCol  (0.443, 0.392, 0.255, 1.0);    // rgba(113, 100, 65, 255)
 
 }
 
-void Gui::init(InitInfo* initInfo, GuiSizes* guiSizes, float guiDpi) {
+void Gui::init(InitInfo* initInfo, GuiStyleEx* styleEx, float guiDpi) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -52,54 +58,120 @@ void Gui::init(InitInfo* initInfo, GuiSizes* guiSizes, float guiDpi) {
     
     ImGui_ImplVulkan_Init(&imguiInitInfo);
 
-    for (int i = 0; i < (sizeof(Gui::GuiSizes) / sizeof(float)); ++i) {
-        ((float*)guiSizes)[i] *= guiDpi;
-    }
-
-    io.Fonts->Clear();
-    io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/arial.ttf",   guiSizes->fontSize);
-    io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/arialbd.ttf", guiSizes->largeFontSize);
-    io.Fonts->Build();
-
-    // Gui Style
+    // Style
     {
 
-        // sizes
-        ImGuiStyle& style = ImGui::GetStyle();
+        // Sizes
+        styleEx->sizes.fontSize           = 16.0f; 
+        styleEx->sizes.largeFontSize      = 28.0f;
+        styleEx->sizes.titleBarHeight     = 28.0f;
+        styleEx->sizes.wndBtnWidth        = 40.0f;
+        styleEx->sizes.menuBarStartExtent = 12.0f;
+        styleEx->sizes.menuBarEndExtent   = 240.0f;
 
-        style.FramePadding = ImVec2(20, 4);
-        style.ItemInnerSpacing = ImVec2(6, 6);
-        style.TabBarBorderSize = 2;
-        style.TabBarOverlineSize = 0;
-        style.TabRounding = 12;
-        style.WindowTitleAlign = ImVec2(0.5, 0.5);
-        style.DockingSeparatorSize = 2;
-        style.TabBorderSize = 0;
+        ImGuiStyle& imStyle = ImGui::GetStyle(); 
 
-        style.Colors[ImGuiCol_WindowBg]      = c_style::col1;
-        style.Colors[ImGuiCol_MenuBarBg]     = c_style::col1;
-        style.Colors[ImGuiCol_TitleBg]       = c_style::col1;
-        style.Colors[ImGuiCol_TitleBgActive] = c_style::col1;
+        imStyle.FramePadding         = ImVec2(12, 3); 
+        imStyle.ItemInnerSpacing     = ImVec2(4, 4); 
+        imStyle.TabBarBorderSize     = 2; 
+        imStyle.TabBarOverlineSize   = 0; 
+        imStyle.TabRounding          = 12;
+        imStyle.WindowTitleAlign     = ImVec2(0.5, 0.5); 
+        imStyle.DockingSeparatorSize = 2; 
+        imStyle.TabBorderSize        = 0; 
+        imStyle.PopupRounding        = 6; 
 
-        style.Colors[ImGuiCol_Header]        = c_style::col3;
-        style.Colors[ImGuiCol_HeaderHovered] = ImGui::rgba32toVec4(60, 60, 60, 255);
+        for (int i = 0; i < (sizeof(styleEx->sizes) / sizeof(float)); ++i) {
+            ((float*)&styleEx->sizes)[i] *= guiDpi;
+        }
 
-        style.Colors[ImGuiCol_Tab]               = c_style::col3;
-        style.Colors[ImGuiCol_TabHovered]        = c_style::hoverCol;
-        style.Colors[ImGuiCol_TabSelected]       = c_style::activeCol;
-        style.Colors[ImGuiCol_TabDimmed]         = c_style::col3;
-        style.Colors[ImGuiCol_TabDimmedSelected] = c_style::col3;
+        io.Fonts->Clear();
+        io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/arial.ttf",   styleEx->sizes.fontSize);
+        io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/arialbd.ttf", styleEx->sizes.largeFontSize);
+        io.Fonts->Build();
 
-        style.Colors[ImGuiCol_ButtonHovered] = ImGui::rgba32toVec4(255, 255, 255, 75);
+        imStyle.WindowPadding    *= guiDpi; 
+        imStyle.WindowRounding   *= guiDpi; 
+        imStyle.WindowMinSize    *= guiDpi; 
+        imStyle.ChildRounding    *= guiDpi; 
+        imStyle.PopupRounding    *= guiDpi; 
+        imStyle.FramePadding     *= guiDpi; 
+        imStyle.FrameRounding    *= guiDpi; 
+        imStyle.ItemSpacing      *= guiDpi; 
+        imStyle.ItemInnerSpacing *= guiDpi; 
+        imStyle.CellPadding      *= guiDpi; 
+        imStyle.GrabRounding     *= guiDpi; 
+        imStyle.TabRounding      *= guiDpi; 
 
-        style.Colors[ImGuiCol_DockingPreview] = c_style::hoverCol;
-        style.Colors[ImGuiCol_DockingEmptyBg] = ImGui::rgba32toVec4(0, 0, 0, 0);
+        // Colors
+        styleEx->colors.shortcutText      = ImVec4(0.784, 0.784, 0.784, 1.0);
+        styleEx->colors.mainWndBackground = ImVec4(0.0784, 0.0784, 0.0784, 1.0);
+
+        ImVec4* colors = ImGui::GetStyle().Colors;
+        colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+        colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+        colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+        colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
+        colors[ImGuiCol_Border] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+        colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_FrameBg] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+        colors[ImGuiCol_FrameBgActive] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+        colors[ImGuiCol_TitleBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+        colors[ImGuiCol_TitleBgActive] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+        colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+        colors[ImGuiCol_MenuBarBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+        colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
+        colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
+        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
+        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
+        colors[ImGuiCol_CheckMark] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+        colors[ImGuiCol_SliderGrab] = ImVec4(0.44f, 0.39f, 0.25f, 1.00f);
+        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.51f, 0.44f, 0.26f, 1.00f);
+        colors[ImGuiCol_Button] = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+        colors[ImGuiCol_ButtonHovered] = ImVec4(1.00f, 1.00f, 1.00f, 0.29f);
+        colors[ImGuiCol_ButtonActive] = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
+        colors[ImGuiCol_Header] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+        colors[ImGuiCol_HeaderHovered] = ImVec4(0.23f, 0.23f, 0.23f, 1.00f);
+        colors[ImGuiCol_HeaderActive] = ImVec4(0.37f, 0.37f, 0.37f, 1.00f);
+        colors[ImGuiCol_Separator] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+        colors[ImGuiCol_SeparatorHovered] = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
+        colors[ImGuiCol_SeparatorActive] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
+        colors[ImGuiCol_ResizeGrip] = ImVec4(0.26f, 0.59f, 0.98f, 0.20f);
+        colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+        colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+        colors[ImGuiCol_TabHovered] = ImVec4(0.44f, 0.39f, 0.25f, 1.00f);
+        colors[ImGuiCol_Tab] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+        colors[ImGuiCol_TabSelected] = ImVec4(0.27f, 0.24f, 0.16f, 1.00f);
+        colors[ImGuiCol_TabSelectedOverline] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+        colors[ImGuiCol_TabDimmed] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+        colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+        colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+        colors[ImGuiCol_DockingPreview] = ImVec4(0.44f, 0.39f, 0.25f, 1.00f);
+        colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
+        colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+        colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+        colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+        colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
+        colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
+        colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
+        colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+        colors[ImGuiCol_TextLink] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+        colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
+        colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+        colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+        colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+        colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+        colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 
     }
 
 }
 
-void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
+void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
  
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -107,8 +179,18 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
 
     ImGuiIO& io = ImGui::GetIO();
 
-    bool openShortcut = io.KeyCtrl && ImGui::IsKeyReleased(ImGuiKey_O, false) || ImGui::IsKeyReleased(ImGuiKey_Space, false);
-    if (openShortcut) *cmdListPtr++ = Gui::cmd_openDialog;
+    // Still need to fix this
+    bool openShortcut = io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_O, false) || ImGui::IsKeyPressed(ImGuiKey_Space, false);
+    if (openShortcut) {
+        *commands |= Gui::cmd_openDialogBit;
+        // Because the window focus transfers to the open menu. The app never recieves an event for key release.
+        // This means that when you press it again IsKeyPressed() will not be flagged because down is still flagged from the last press.
+        // This effectively manually triggers a release event. 
+        io.AddKeyEvent(ImGuiKey_O, false);
+        io.AddKeyEvent(ImGuiKey_Space, false);
+    }
+    bool quitShortcut = io.KeyCtrl && ImGui::IsKeyDown(ImGuiKey_Q);
+    if (quitShortcut) *commands |= Gui::cmd_closeWindowBit;
 
     // Main dockspace
     ImGuiID dockspaceID;
@@ -123,10 +205,10 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
         windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoTitleBar;
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        float titleBarPadding = 0.5f * (data->guiSizes.titleBarHeight - data->guiSizes.fontSize);
+        float titleBarPadding = 0.5f * (data->styleEx.sizes.titleBarHeight - data->styleEx.sizes.fontSize);
         ImVec2 prevFramePadding = ImGui::GetStyle().FramePadding;
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, titleBarPadding));
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, c_style::col2); 
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, data->styleEx.colors.mainWndBackground);
 
         ImGui::Begin("Simple Viewer 3D", nullptr, windowFlags);
 
@@ -137,17 +219,28 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, titleBarPadding));
         if (ImGui::BeginMenuBar())
         {
-            ImGui::SetCursorPosX(data->guiSizes.menuBarStartExtent);
+            ImGui::SetCursorPosX(data->styleEx.sizes.menuBarStartExtent);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
-            float width = data->guiSizes.titleBarHeight; 
+            float width = data->styleEx.sizes.titleBarHeight;
             float height = width;
-            ImGui::Image(data->logoTexID, ImVec2(width, height));
+            ImGui::Image(data->icoTexID, ImVec2(width, height));
 
             if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Open", "Ctrl + O") && !openShortcut) *cmdListPtr++ = Gui::cmd_openDialog;
+                if (ImGui::MenuItem("Open", "Ctrl + O"))                                 *commands |= Gui::cmd_openDialogBit;
+                if (ImGui::MenuItem("Close", "Ctrl + W", false, !!data->vpDatas.size())) data->lastFocusedVp->open = false;
+                if (ImGui::MenuItem("Quit", "Ctrl + Q"))                                 *commands |= Gui::cmd_closeWindowBit;
                 ImGui::EndMenu();
             }
-            ImGui::PopStyleVar();
+            if (ImGui::BeginMenu("Model")) {
+                if (ImGui::MenuItem("Center", "Shift + C", false, !!data->vpDatas.size())) data->lastFocusedVp->model[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Preferences")) { 
+                ImGui::Text("Sensitivity"); ImGui::SameLine();
+                ImGui::SliderFloat("##Sense", &data->sensitivity, 1.0f, 100.0f, " % .0f", ImGuiSliderFlags_ClampOnInput);
+                ImGui::EndMenu(); 
+            }
+            ImGui::PopStyleVar(); 
             ImGui::SetCursorPosX(0.465f * viewport->Size.x);
             ImGui::Text("Simple Viewer 3D");
 
@@ -156,8 +249,8 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0, 1.0, 1.0, 0.15));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0, 1.0, 1.0, 0.4));
 
-            float btnWidth     = data->guiSizes.wndBtnWidth;
-            float btnHeight    = data->guiSizes.titleBarHeight;
+            float btnWidth     = data->styleEx.sizes.wndBtnWidth;
+            float btnHeight    = data->styleEx.sizes.titleBarHeight;
             float iconSize     = 0.25f * btnWidth;
             float iconStartPos = 0.5f * (btnWidth - iconSize);
             constexpr float iconLineWidth = 2.0;
@@ -165,20 +258,20 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
             // Minimize Button
             ImGui::SetCursorPosX(viewport->Size.x - 3 * btnWidth);
             ImVec2 minimizeIconDrawPos = ImGui::GetCursorPos() + ImVec2(iconStartPos, 0.5f * btnHeight);
-            if (ImGui::Button("##Min", ImVec2(btnWidth, btnHeight))) *cmdListPtr++ = Gui::cmd_minimizeWindow;
+            if (ImGui::Button("##Min", ImVec2(btnWidth, btnHeight))) *commands |= Gui::cmd_minimizeWindowBit;
 
             // Maximize/Restore Button
             ImGui::SetCursorPosX(viewport->Size.x - 2 * btnWidth);
             ImVec2 windowIconDrawPos = ImGui::GetCursorPos() + ImVec2(iconStartPos, 0.5f * (btnHeight - iconSize));
             if (ImGui::Button("##Max", ImVec2(btnWidth, btnHeight))) {
-                if (IsZoomed(hwnd)) *cmdListPtr++ = Gui::cmd_restoreWindow;
-                else                *cmdListPtr++ = Gui::cmd_maximizeWindow;
+                if (IsZoomed(hwnd)) *commands |= Gui::cmd_restoreWindowBit;
+                else                *commands |= Gui::cmd_maximizeWindowBit;
             }
 
             // Close App Button 
             ImGui::SetCursorPosX(viewport->Size.x - btnWidth);
             ImVec2 closeIconDrawPos = ImGui::GetCursorPos() + ImVec2(iconStartPos, 0.5f * (btnHeight - iconSize));
-            if (ImGui::Button("##Close", ImVec2(btnWidth, btnHeight))) *cmdListPtr++ = Gui::cmd_closeWindow;
+            if (ImGui::Button("##Close", ImVec2(btnWidth, btnHeight))) *commands |= Gui::cmd_closeWindowBit;
 
             ImGui::PopStyleColor(3);
 
@@ -208,9 +301,8 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
             ImGui::EndMenuBar();
         }
         ImGui::PopStyleVar(2);
-
         ImVec2 windSize = ImGui::GetWindowSize(); 
-        ImGui::SetCursorPos(0.5f * (windSize - data->logoSize) - ImVec2(0, 2 * data->guiSizes.largeFontSize));
+        ImGui::SetCursorPos((windSize - data->logoSize) * 0.5f - ImVec2(0, 2 * data->styleEx.sizes.largeFontSize));
         ImGui::Image(data->logoTexID, data->logoSize); 
 
         ImGui::PushFont(io.Fonts->Fonts[1]); 
@@ -220,7 +312,7 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
         float line1Width = ImGui::CalcTextSize(tipLine1).x;
         float line2Width = ImGui::CalcTextSize(tipLine2).x;
         float line3Width = ImGui::CalcTextSize(tipLine3).x;
-        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::rgba32toVec4(200, 200, 200, 255)); 
+        ImGui::PushStyleColor(ImGuiCol_Text, data->styleEx.colors.shortcutText);
         ImGui::SetCursorPosX((windSize.x - line1Width) / 2);
         ImGui::Text(tipLine1);
         ImGui::SetCursorPosX((windSize.x - line2Width) / 2);
@@ -238,6 +330,105 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
 
 #ifdef DEBUG
     ImGui::ShowDemoWindow();
+    if (ImGui::Begin("GuiStyleEx")) {
+
+        ImGui::ColorEdit4("shortcutText", (float*)&data->styleEx.colors.shortcutText, ImGuiColorEditFlags_AlphaBar); 
+        ImGui::ColorEdit4("mainWndBackground", (float*)&data->styleEx.colors.mainWndBackground, ImGuiColorEditFlags_AlphaBar);
+
+        ImGui::SliderFloat("titleBarHeight",     (float*)&data->styleEx.sizes.titleBarHeight,     1.0f, 50.0f);
+        ImGui::SliderFloat("wndBtnWidth",        (float*)&data->styleEx.sizes.wndBtnWidth,        1.0f, 50.0f);
+        ImGui::SliderFloat("menuBarStartExtent", (float*)&data->styleEx.sizes.menuBarStartExtent, 1.0f, 50.0f);
+        ImGui::SliderFloat("menuBarEndExtent",   (float*)&data->styleEx.sizes.menuBarEndExtent,   1.0f, 50.0f);
+
+    }
+    ImGui::End(); 
+
+    if (ImGui::Begin("Debug info")) {
+        ImGui::SeparatorText("ViewportGuiData");
+        if (data->vpDatas.size() > 0) {
+
+            const char* openFiles[16];
+            for(int i = 0; i < 16 && i < data->vpDatas.size(); i++) 
+                openFiles[i] = data->vpDatas[i].objectName.get(); 
+            static int currentFile = 0; 
+            if (currentFile >= data->vpDatas.size()) currentFile = 0; 
+            ImGui::Combo("File", &currentFile, openFiles,(int)data->vpDatas.size());
+            ImGui::SeparatorText("model matrix");
+            if (ImGui::BeginTable("model matrix", 4, ImGuiTableFlags_SizingFixedSame)) {
+            
+                glm::mat4& model = data->vpDatas[currentFile].model; 
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("%.3f", model[0][0]);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%.3f", model[1][0]);
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Text("%.3f", model[2][0]);
+                ImGui::TableSetColumnIndex(3);
+                ImGui::Text("%.3f", model[3][0]);
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("%.3f", model[0][1]);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%.3f", model[1][1]);
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Text("%.3f", model[2][1]);
+                ImGui::TableSetColumnIndex(3);
+                ImGui::Text("%.3f", model[3][1]);
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("%.3f", model[0][2]);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%.3f", model[1][2]);
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Text("%.3f", model[2][2]);
+                ImGui::TableSetColumnIndex(3);
+                ImGui::Text("%.3f", model[3][2]);
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("%.3f", model[0][3]);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%.3f", model[1][3]);
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Text("%.3f", model[2][3]);
+                ImGui::TableSetColumnIndex(3);
+                ImGui::Text("%.3f", model[3][3]);
+
+                ImGui::EndTable();
+            }
+            ImGui::SeparatorText("other");
+            if (ImGui::BeginTable("ViewportGuiData", 2, ImGuiTableFlags_SizingFixedSame)) {
+
+                ViewportGuiData& vpData = data->vpDatas[currentFile];
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("zoomDistance");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%.3f", vpData.zoomDistance);
+                // BOOKMARK: label shortcut for centering the model. 
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("farPlaneClip");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%.3f", vpData.farPlaneClip);
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("modelCenter");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("(%.3f, %.3f, %.3f)", vpData.modelCenter.x, vpData.modelCenter.y, vpData.modelCenter.z);
+
+
+                ImGui::EndTable();
+            }
+        }
+    }
+    ImGui::End(); 
+
 #endif
 #ifdef DEVINFO
 
@@ -248,8 +439,9 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
         constexpr int sampleCount = sizeof data->stats.frameWaitTimesGraph / sizeof(float);
         ImGui::PlotLines("Frame Time Error", func, data->stats.frameWaitTimesGraph, sampleCount, 0, nullptr, -scale, scale, ImVec2(0, 200));
         ImGui::Text("Scale: %.3fms", scale * 1000);
+        ImGui::SeparatorText("Viewports Data");
         ImGui::Text("Viewport resizes: %u", data->stats.resizeCount);
-        ImGui::Text("Performance Times:");
+        ImGui::SeparatorText("Performance Times");
         ImGui::Text("openFile: %.2fms", 1000 * data->stats.perfTimes.openFile);
         ImGui::Text("fileClose: %.2fms", 1000 * data->stats.perfTimes.fileClose);
         ImGui::Text("viewportResize: %.2fms", 1000 * data->stats.perfTimes.viewportResize);
@@ -262,64 +454,104 @@ void Gui::draw(HWND hwnd, Commands* cmdListPtr, DrawData* data) {
 #endif
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
     for (ViewportGuiData& vpData : data->vpDatas) {
 
         vpData.visible = false;
         ImGuiWindowFlags windFlags = ImGuiWindowFlags_NoScrollbar;
-        windFlags |= ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings ;
+        windFlags |= ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings;
         ImGui::SetNextWindowDockID(dockspaceID, ImGuiCond_Once);
         if (ImGui::Begin(vpData.objectName.get(), &vpData.open, windFlags)) {
-
             bool focus = ImGui::IsWindowFocused(); 
-            if (focus && io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_W)) vpData.open = false;
+            bool wKey = ImGui::IsKeyPressed(ImGuiKey_W, false); 
+            if (focus && io.KeyCtrl && wKey) vpData.open = false;
+            data->lastFocusedVp = &vpData;
 
             ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
 
-            if (currentVpSize.x > 0.0 && currentVpSize.y > 0.0)
-            {
+            if (currentVpSize.x > 0.0 && currentVpSize.y > 0.0) {
+
                 vpData.visible = true;
 
-                if (vpData.m_size != currentVpSize) { 
+                if (vpData.size != currentVpSize) { 
                     vpData.resize = true; 
-                    vpData.m_size = currentVpSize; 
+                    vpData.size = currentVpSize; 
                 }
-                ImGui::Image(vpData.framebufferTexID, vpData.m_size);
+                ImGui::Image(vpData.framebufferTexID, vpData.size);
 
+                ImGui::SetCursorPos(ImGui::GetCursorStartPos() + ImVec2(0, 15));
+                
+                //ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20)); 
+                //ImGuiChildFlags childFlags = ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding;
+                //ImGui::BeginChild("ModelInfo", ImVec2(0.0, 0.0), childFlags;
+                if (ImGui::TreeNodeEx("File Info", ImGuiTreeNodeFlags_SpanTextWidth | ImGuiTreeNodeFlags_DefaultOpen)) {
+                    if (ImGui::BeginTable("File Info Table", 2, ImGuiTableFlags_SizingFixedSame)) {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("Triangles");
+                        ImGui::TableSetColumnIndex(1); 
+                        ImGui::Text("%u", vpData.triangleCount);
+                        ImGui::TableNextRow(); 
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("Unique Triangles");
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%u", vpData.uniqueTriangleCount);
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("Text Format?");
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%s", vpData.isTextFormat ? "Yes" : "No");
+                        ImGui::EndTable(); 
+                    }
+                    ImGui::TreePop(); 
+                }
+                //ImGui::EndChild();
+                //ImGui::PopStyleVar(); 
+
+                constexpr float c_defPanSense   = 0.0009f;
+                constexpr float c_defOrbitSense = 0.01f;
+                constexpr float c_defZoomSense  = 0.1f; 
+                float sensePreferenceMultiplier = data->sensitivity / 100; 
                 if (ImGui::IsWindowHovered()) {
-                    vpData.zoomDistance += io.MouseWheel; 
-                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) vpData.orbitActive = true;
+
+                    float zoomSensitivity = c_defZoomSense * sensePreferenceMultiplier;
+                    vpData.zoomDistance += zoomSensitivity * -vpData.zoomDistance * io.MouseWheel;
+                    vpData.zoomDistance = std::clamp(vpData.zoomDistance, vpData.zoomMin, -1.0f);
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))  vpData.orbitActive = true;
                     if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) vpData.panActive   = true;
 
                 }
                 if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))  vpData.orbitActive = false;
                 if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) vpData.panActive   = false;
 
-                constexpr float c_sensitivity = 0.005;
-                if (vpData.orbitActive) {
-                    vpData.orbitAngle  += glm::vec2(-c_sensitivity * io.MouseDelta.y, c_sensitivity * io.MouseDelta.x);
-                    vpData.orbitAngle.x = glm::clamp(vpData.orbitAngle.x, glm::radians(-90.0f), glm::radians(90.0f));
+                if (vpData.orbitActive && io.MouseDelta != ImVec2(0, 0)) {
+
+                    float& x = io.MouseDelta.x;
+                    float& y = io.MouseDelta.y; 
+                    float orbitSensitivity = c_defOrbitSense * sensePreferenceMultiplier; 
+                    float angle = orbitSensitivity * sqrtf(x * x + y * y);
+                    vpData.model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(-y, x, 0.0f)) * vpData.model;
+
                 }
                 if (vpData.panActive) {
-                    float cosx = cosf(vpData.orbitAngle.x);
-                    float sinx = sinf(vpData.orbitAngle.x);
-                    float cosy = cosf(vpData.orbitAngle.y);
-                    float siny = sinf(vpData.orbitAngle.y);
-                    glm::vec3 panDelta;
-                    panDelta  = io.MouseDelta.x * glm::vec3(cosy, 0.0f, siny); 
-                    panDelta += io.MouseDelta.y * glm::vec3(sinx * siny, cosx, -sinx * cosy); 
-                    panDelta *= c_sensitivity; 
-                    vpData.cameraPos += panDelta;
+
+                    float panSensitivity = c_defPanSense * sensePreferenceMultiplier; 
+                    glm::vec2 panDelta = panSensitivity * -vpData.zoomDistance * glm::vec2(io.MouseDelta.x, io.MouseDelta.y);
+                    vpData.panPos() += panDelta;
+
                 }
             }
         }
+        // Down here to hit cache line from vpData.panPos()
+        if (io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_C, false)) vpData.model[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+      
         ImGui::End();
 
     }
 
+    //BOOKMARK: fix bug where the window won't close when clicked from menu because the window loses focus when the menu is clicked. 
+
     ImGui::PopStyleVar();
     ImGui::EndFrame();
-    *cmdListPtr = Gui::cmd_null;
 }
 
 void Gui::destroy() {
