@@ -4,3 +4,9 @@
 [submodule "Dependencies/imgui"]
 	path = Dependencies/imgui
 	url = https://github.com/Zachhaaa/imgui.git
+[submodule "Dependencies/VulkanHelpers"]
+	path = Dependencies/VulkanHelpers
+	url = https://github.com/Zachhaaa/VulkanHelpers.git
+[submodule "Dependencies/TimerApi"]
+	path = Dependencies/TimerApi
+	url = https://github.com/Zachhaaa/TimerApi.git
