@@ -9,3 +9,6 @@ Error-Log.txt
 
 res/
 imgui.ini
+
+src/FileArrays/*
+!src/FileArrays/ABOUT_THIS_DIRECTORY.txt

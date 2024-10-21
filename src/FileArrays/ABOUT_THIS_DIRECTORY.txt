@@ -1,0 +1,2 @@
+This directory will contain compile time generated .h and .cpp files which will contain the data for certain files stored in c style arrays. 
+This allows these resources to be integrated into the executable and not as separate files that needed to be loaded on launch. 

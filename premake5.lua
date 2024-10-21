@@ -24,10 +24,10 @@ project "Simple Viewer 3D"
 
     -- So these files are actually included in the compile list
     -- The actual code for these files is generated when compiling the shaders
-    os.execute "touch src/FileArrays/shader_frag_spv.h"
-    os.execute "touch src/FileArrays/shader_frag_spv.cpp"
-    os.execute "touch src/FileArrays/shader_vert_spv.h"
-    os.execute "touch src/FileArrays/shader_vert_spv.cpp"
+    os.execute "echo \"\" > src/FileArrays/shader_frag_spv.h"
+    os.execute "echo \"\" > src/FileArrays/shader_frag_spv.cpp"
+    os.execute "echo \"\" > src/FileArrays/shader_vert_spv.h"
+    os.execute "echo \"\" > src/FileArrays/shader_vert_spv.cpp"
 
     files {
         "src/**.cpp", 
