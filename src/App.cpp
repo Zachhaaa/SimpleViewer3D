@@ -219,7 +219,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             vkGetPhysicalDeviceProperties(queriedDevice, &deviceProperties);
 
             VkSampleCountFlags counts = deviceProperties.limits.framebufferColorSampleCounts & deviceProperties.limits.framebufferDepthSampleCounts;
-            if(!(counts & c_vlkn::sampleCount)) continue; 
+            if (!(counts & c_vlkn::sampleCount)) continue;
 
             uint32_t queueFamilyPropertyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(queriedDevice, &queueFamilyPropertyCount, nullptr);
@@ -276,13 +276,15 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             vkGetPhysicalDeviceSurfacePresentModesKHR(queriedDevice, inst->rend.surface, &presentModeCount, nullptr);
             std::vector<VkPresentModeKHR> presentModes(presentModeCount);
             vkGetPhysicalDeviceSurfacePresentModesKHR(queriedDevice, inst->rend.surface, &presentModeCount, presentModes.data());
-            for (VkPresentModeKHR presentMode : presentModes) {
-                if (presentMode == c_vlkn::presentMode) {
-                    presentModeAdequate = true;
-                    break;
+            auto hasPresentMode = [](const std::vector<VkPresentModeKHR>& modes, VkPresentModeKHR desiredMode) {
+                for (VkPresentModeKHR presentMode : modes) {
+                    if (presentMode == desiredMode) return true;
                 }
-            }
-            if (!presentModeAdequate) continue;
+                return false;
+            };
+            if      (hasPresentMode(presentModes, c_vlkn::presentMode))       inst->rend.presentMode = c_vlkn::presentMode;
+            else if (hasPresentMode(presentModes, c_vlkn::backupPresentMode)) inst->rend.presentMode = c_vlkn::backupPresentMode;
+            else { continue; }
 
             compatableDevices.push_back(queriedDevice);
         }
@@ -429,15 +431,19 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
     }
 
-    // Decriptor pool creation 
+    // Descriptor pool creation 
     {
+
+        VkDescriptorPoolSize poolSizeInfo{};
+        poolSizeInfo.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizeInfo.descriptorCount = c_vlkn::maxSets; 
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
         poolInfo.maxSets       = c_vlkn::maxSets;
-        poolInfo.poolSizeCount = 0;
-        poolInfo.pPoolSizes    = nullptr;
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes    = &poolSizeInfo;
 
         VkResult err = vkCreateDescriptorPool(inst->rend.device, &poolInfo, nullptr, &inst->rend.descriptorPool);
         CORE_ASSERT(err == VK_SUCCESS && "Descriptor pool creation failed");

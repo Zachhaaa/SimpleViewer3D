@@ -50,6 +50,7 @@ struct VlknRenderInstance {
     VkQueue                  graphicsQueue;
     VkQueue                  presentQueue;
     VkExtent2D               windowImageExtent;
+    VkPresentModeKHR         presentMode;
     VkSwapchainKHR           swapchain;
     uint32_t                 imageCount;
     VkImage*                 swapchainImages;

@@ -54,7 +54,7 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
         createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode = c_vlkn::presentMode;
+        createInfo.presentMode = inst->rend.presentMode;
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = oldSwapchain;
 
