@@ -272,7 +272,6 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             if (!formatsAdequate) continue;
 
             uint32_t presentModeCount;
-            bool presentModeAdequate = false;
             vkGetPhysicalDeviceSurfacePresentModesKHR(queriedDevice, inst->rend.surface, &presentModeCount, nullptr);
             std::vector<VkPresentModeKHR> presentModes(presentModeCount);
             vkGetPhysicalDeviceSurfacePresentModesKHR(queriedDevice, inst->rend.surface, &presentModeCount, presentModes.data());

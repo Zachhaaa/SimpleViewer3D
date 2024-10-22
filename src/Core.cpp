@@ -479,7 +479,7 @@ bool Core::openMeshFile(Instance* inst, const char* file) {
     scopedTimer(t1, &inst->gui.stats.perfTimes.openFile);
     if (file == nullptr) return false;
     if (file[0] == '\0') return false;
-    const char* fileTitle;
+    const char* fileTitle = file;
     const char* i = file;
     for (; *i != '\0'; ++i)
         if (*i == '/' || *i == '\\') fileTitle = i + 1;
