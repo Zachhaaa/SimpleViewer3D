@@ -17,38 +17,55 @@ namespace mload {
 		vec3 pos;
 		vec3 normal;
 
-		Vertex() {};
+		Vertex() {}
+		Vertex(float c) : pos({ c, c, c }), normal({ c, c, c }) {} 
 		Vertex(const vec3& pos, const vec3& normal) : pos(pos), normal(normal) {}
 		bool operator==(const Vertex& other) const {
 			return pos == other.pos && normal == other.normal;
 		}
 	};
-}
+	struct ObjVertexIndex {
+		uint32_t posIndex;
+		uint32_t normalIndex; 
 
-class VertexMap {
-public:
+		ObjVertexIndex() {}
+		bool operator==(const ObjVertexIndex& other) const { return *(uint64_t*)this == *(uint64_t*)&other; }
 
-	VertexMap(size_t m_bucketCount, size_t predictedElementCount);
-
-	uint32_t* getKeyValue(const mload::Vertex& key, bool* itemAlreadyExists);
-
-	~VertexMap();
-
-private: 
-
-	struct LinkedListItem {
-		mload::Vertex  key;
-		uint32_t       value;
-		LinkedListItem* pNext; 
-		LinkedListItem() { }
 	};
 
-	LinkedListItem**             m_buckets     = nullptr; 
-	size_t                       m_bucketCount; 
-	std::vector<LinkedListItem*> m_elementAllocs; 
+	template<typename K, typename V> 
+	class Map {
+	private: 
 
-	LinkedListItem*              m_freeElement = nullptr;
-	size_t                       m_size        = 0;
-	size_t                       m_capacity    = 0; 
+		struct LinkedListItem {
+			K key;
+			V value;
+			LinkedListItem* pNext;
+			LinkedListItem() { }
+		};
 
-};
+	public:
+
+		Map(size_t m_bucketCount, size_t predictedElementCount);
+		Map(const Map&) = delete; 
+		void operator=(const Map&) = delete;
+
+		V* getKeyValue(const K& key, bool* itemAlreadyExists);
+
+		~Map();
+
+	private: 
+
+		LinkedListItem**             m_buckets     = nullptr; 
+		size_t                       m_bucketCount; 
+		std::vector<LinkedListItem*> m_elementAllocs; 
+
+		LinkedListItem*              m_freeElement = nullptr;
+		size_t                       m_size        = 0;
+		size_t                       m_capacity    = 0; 
+
+	};
+
+}
+
+#include "VertexMap.inl"

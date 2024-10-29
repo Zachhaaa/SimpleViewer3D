@@ -498,7 +498,7 @@ bool Core::openMeshFile(Instance* inst, const char* file) {
     std::vector<uint32_t>      indices;
 
     bool isTextFormat;
-    if (!mload::openModel(file, &vertices, &indices, &isTextFormat)) return false;
+    if (mload::openModel(file, &vertices, &indices, &isTextFormat)) return false;
 
     Core::VertexIndexBuffersInfo buffsInfo{};
     buffsInfo.vertexData = vertices.data();

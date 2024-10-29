@@ -913,13 +913,12 @@ void App::render(Core::Instance* inst) {
         ofn.lpstrFile = fileName;
         ofn.lpstrFile[0] = '\0';
         ofn.nMaxFile = sizeof(fileName);
-        ofn.lpstrFilter = "STL files\0*.stl\0";
+        ofn.lpstrFilter = ".obj or .stl\0*.stl;*.obj\0";
         ofn.nFilterIndex = 1;
         ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER;
 
         if (GetOpenFileNameA(&ofn) != TRUE) return;
 
-        // TODO: add checks to see if file is valid to open
         Core::openMeshFile(inst, fileName);
         return;
 
