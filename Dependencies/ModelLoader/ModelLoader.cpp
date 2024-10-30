@@ -31,12 +31,12 @@ namespace std {
 /// @param i pointer to the index in the data. 
 /// @param v pointer to the first element(x) in a vec3
 static void objGetVec3FromText(const char* str, uint32_t* i, uint32_t fileSize, float* v) {
-	for (int componentIndex = 0; componentIndex < 3; componentIndex++) { // componentIndex == 1: x, componentIndex == 2: y, componentIndex == 3: z
+	for (int componentIndex = 0; componentIndex < 3; componentIndex++) { // componentIndex == 0: x, componentIndex == 1: y, componentIndex == 2: z
 
 		bool endOfNumber;
 		while (true) {
-			endOfNumber = str[*i] == '.' || str[*i] == ' ' || str[*i] == '\n' || str[*i] == '\r';
-			if (endOfNumber) break;
+			endOfNumber = str[*i] == ' ' || str[*i] == '\n' || str[*i] == '\r';
+			if (endOfNumber || str[*i] == '.') break;
 			(*i)++; 
 		}
 		float placeHolder = 1.0f;
@@ -50,10 +50,11 @@ static void objGetVec3FromText(const char* str, uint32_t* i, uint32_t fileSize, 
 		else if (endOfNumber) continue; 
 		(*i)++;
 
-		placeHolder = 0.1f;
-		for (; str[*i] != ' ' && *i < fileSize; (*i)++, placeHolder /= 10.0f) {
+		placeHolder = value > 0 ? 0.1f : -0.1f;
+		for (; str[*i] >= '0' && str[*i] <= '9' && *i < fileSize; (*i)++, placeHolder /= 10.0f) {
 			value += (str[*i] - '0') * placeHolder;
 		}
+		(*i)++; 
 
 	}
 }
@@ -133,14 +134,14 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 			}
 			else if (fData[i] == 'f') {  
 				i++;
-				for (uint32_t indexCount = 0; i < fileSize; i++) {
+				for (uint32_t indexCount = 0; i < fileSize - 1; i++) {
 					if (fData[i] == '\n') {
 						if(fData[i] )
 						break;
 					}
-					if (fData[i] == ' ') { 
+					if (fData[i] == ' ' && fData[i + 1] >= '0' && fData[i + 1] <= '9') {
 						indexCount++; // BOOKMARK: fix the space before the newline counting as an additional index.  
-						indexElementsCapacity += indexCount > 3 ? 3 : 1;
+      					indexElementsCapacity += indexCount > 3 ? 3 : 1;
 					}
 				}
 			}
@@ -262,27 +263,30 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 		Map<ObjVertexIndex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), vertexElementsCapacity);
 
 		uint32_t facetSectionIndex = 0;
-		for (uint32_t i = 0; true; i++) {
+		for (uint32_t i = 0; i < fileSize; i++) {
 			// TODO: try this to see if it is faster at parsing if (*(int16_t*)&fData[i] == ('v' | ' ' << 8))
 			if (fData[i] == 'v') {
 				i++;
-				if (fData[i] == ' ') {
-					i++; 
+				if (fData[i] == ' ') { 
+					do { i++; } while (fData[i] == ' ');
 					objGetVec3FromText(fData.get(), &i, fileSize, (float*)vertexPositionsNewElement);
 					vertexPositionsNewElement++; 
 				}
 				else if (fData[i] == 'n') {
 					i += 2; 
+					for (; fData[i] == ' '; i++) {}
 					objGetVec3FromText(fData.get(), &i, fileSize, (float*)vertexNormalsNewElement);
-  					vertexNormalsNewElement++; 
+  					vertexNormalsNewElement++; // bookmark: check normal parsing and then facet parsing. 
 				}
 			}
 			// break if the vertex position and normals have been filled.
 			else if (fData[i] == 'f' && vertexPositions != vertexPositionsNewElement && vertexNormals != vertexNormalsNewElement) { 
-				facetSectionIndex = i; break; 
+				facetSectionIndex = i; 
+				break; 
 			}
-
-			for (; i < fileSize; i++) { if (fData[i] == '\n') break; }
+			else {
+				for (; i < fileSize; i++) { if (fData[i] == '\n') break; }
+			}
 		}
 		for (uint32_t i = facetSectionIndex; i < fileSize; i++) {
 			uint32_t vertexCountInFacet = 0;
@@ -314,5 +318,4 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 	}
 
 	return Success::SUCCESS;
-
 }
