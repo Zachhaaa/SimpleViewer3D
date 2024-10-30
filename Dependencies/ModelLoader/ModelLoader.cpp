@@ -27,6 +27,7 @@ namespace std {
 	};
 }
 /// Get the next 3 float values in a string from an obj file
+inline bool charIsDigit(const char c) { return c >= '0' && c <= '9'; } 
 /// @param str string to read floats from
 /// @param i pointer to the index in the data. 
 /// @param v pointer to the first element(x) in a vec3
@@ -51,7 +52,7 @@ static void objGetVec3FromText(const char* str, uint32_t* i, uint32_t fileSize, 
 		(*i)++;
 
 		placeHolder = value > 0 ? 0.1f : -0.1f;
-		for (; str[*i] >= '0' && str[*i] <= '9' && *i < fileSize; (*i)++, placeHolder /= 10.0f) {
+		for (; charIsDigit(str[*i]) && *i < fileSize; (*i)++, placeHolder /= 10.0f) {
 			value += (str[*i] - '0') * placeHolder;
 		}
 		(*i)++; 
@@ -81,7 +82,7 @@ static void objGetIndexFromText(const char* str, uint32_t* i, uint32_t fileSize,
 		for (; str[*i] != '/'; (*i)++) {} 
 		(*i)++;
 
-		for (; str[*i] >= '0' && str[*i] <= '9'; (*i)++) {}
+		for (; charIsDigit(str[*i]); (*i)++) {}
 		v->normalIndex = getUint32FromText(&str[*i - 1]); 
 	}
 
@@ -139,7 +140,7 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 						if(fData[i] )
 						break;
 					}
-					if (fData[i] == ' ' && fData[i + 1] >= '0' && fData[i + 1] <= '9') {
+					if (fData[i] == ' ' && charIsDigit(fData[i + 1])) {
 						indexCount++; // BOOKMARK: fix the space before the newline counting as an additional index.  
       					indexElementsCapacity += indexCount > 3 ? 3 : 1;
 					}
@@ -177,7 +178,7 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 
 				// Apply exponent
 				c += 4;
-				for (; *c >= '0' && *c <= '9'; ++c);
+				for (; charIsDigit(*c); ++c);
 				int exponent = 0;
 				uint32_t digitBase = 1;
 				char* ex_c = &c[-1];
@@ -288,11 +289,11 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 				for (; i < fileSize; i++) { if (fData[i] == '\n') break; }
 			}
 		}
-		for (uint32_t i = facetSectionIndex; i < fileSize; i++) {
+		for (uint32_t i = facetSectionIndex; i < fileSize;) {
 			uint32_t vertexCountInFacet = 0;
 			for (; i < fileSize; i++) { if (fData[i-1] == '\n' && fData[i] == 'f') break; }
-			i += 2; 
-			for (; i < fileSize; i++) {
+			do { i++; } while (fData[i] == ' '); // jump whitespace
+			for (; i < fileSize && charIsDigit(fData[i]); i++) {
 				mload::ObjVertexIndex vertexIndex;
 				objGetIndexFromText(fData.get(), &i, fileSize, &vertexIndex);
 				bool keyExists;
@@ -304,12 +305,11 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 				}
 				vertexCountInFacet++;
 				if (vertexCountInFacet > 3) {
-					indexBuff->push_back((*indexBuff)[indexBuff->size() - vertexCountInFacet]);
+					indexBuff->push_back((*indexBuff)[indexBuff->size() - vertexCountInFacet + 1]);
 					indexBuff->push_back((*indexBuff)[indexBuff->size() - 2]);
 				}
 				indexBuff->push_back(*pIndex);
 
-				if (fData[i] == '\n' || fData[i] == '\r') break;
 			}
 		}
 		free(vertexPositions); 
