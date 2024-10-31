@@ -674,17 +674,17 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
             // Offset the 12 pixel extension when maximized
             if (IsZoomed(hwnd)) {
-                pncsp->rgrc[0].left += 12;  
-                pncsp->rgrc[0].top += 12;   
-                pncsp->rgrc[0].right -= 12; 
-                pncsp->rgrc[0].bottom -= 12;
+                pncsp->rgrc[0].left += 7;  
+                pncsp->rgrc[0].top += 7;
+                pncsp->rgrc[0].right -= 7; 
+                pncsp->rgrc[0].bottom -= 7;
             }
             // Extend the border 1 pixel in for the standard border
             else {
-                pncsp->rgrc[0].left += 1;
-                pncsp->rgrc[0].top += 1;
-                pncsp->rgrc[0].right -= 1;
-                pncsp->rgrc[0].bottom -= 1;
+                pncsp->rgrc[0].left += 0;
+                pncsp->rgrc[0].top += 0;
+                pncsp->rgrc[0].right -= 0;
+                pncsp->rgrc[0].bottom -= 0;
             }
 
             return 0;
