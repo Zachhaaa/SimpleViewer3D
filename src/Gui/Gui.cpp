@@ -62,12 +62,13 @@ void Gui::init(InitInfo* initInfo, GuiStyleEx* styleEx, float guiDpi) {
     {
 
         // Sizes
-        styleEx->sizes.fontSize           = 16.0f; 
-        styleEx->sizes.largeFontSize      = 28.0f;
-        styleEx->sizes.titleBarHeight     = 28.0f;
-        styleEx->sizes.wndBtnWidth        = 40.0f;
-        styleEx->sizes.menuBarStartExtent = 12.0f;
-        styleEx->sizes.menuBarEndExtent   = 240.0f;
+        styleEx->sizes.fontSize                          = 16.0f; 
+        styleEx->sizes.largeFontSize                     = 28.0f;
+        styleEx->sizes.titleBarHeight                    = 28.0f;
+        styleEx->sizes.wndBtnWidth                       = 40.0f;
+        styleEx->sizes.menuBarStartExtent                = 12.0f;
+        styleEx->sizes.menuBarEndExtent                  = 240.0f;
+        styleEx->sizes.mouseControlsTextVerticalOffset   = 6.0f;
 
         ImGuiStyle& imStyle = ImGui::GetStyle(); 
 
@@ -479,10 +480,6 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
                 ImGui::Image(vpData.framebufferTexID, vpData.size);
 
                 ImGui::SetCursorPos(ImGui::GetCursorStartPos() + ImVec2(0, 15));
-                
-                //ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20)); 
-                //ImGuiChildFlags childFlags = ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding;
-                //ImGui::BeginChild("ModelInfo", ImVec2(0.0, 0.0), childFlags;
                 if (ImGui::TreeNodeEx("File Info", ImGuiTreeNodeFlags_SpanTextWidth | ImGuiTreeNodeFlags_DefaultOpen)) {
                     if (ImGui::BeginTable("File Info Table", 2, ImGuiTableFlags_SizingFixedSame)) {
                         ImGui::TableNextRow();
@@ -504,8 +501,13 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
                     }
                     ImGui::TreePop(); 
                 }
-                //ImGui::EndChild();
-                //ImGui::PopStyleVar(); 
+
+                ImVec2 ControlsCursorPos = ImGui::GetCursorStartPos() + ImVec2(15, vpData.size.y - 1.25 * data->mouseControlsSize.y);
+                ImGui::SetCursorPos(ControlsCursorPos); 
+                ImGui::Image(data->mouseControlsTexID, data->mouseControlsSize); 
+                ImGui::SameLine(); 
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + data->styleEx.sizes.mouseControlsTextVerticalOffset); 
+                ImGui::Text("Orbit\n\nPan\n\nZoom");
 
                 constexpr float c_defPanSense   = 0.0009f;
                 constexpr float c_defOrbitSense = 0.01f;

@@ -783,7 +783,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         struct NSVGrasterizer* rast = nsvgCreateRasterizer();
         // Large logo
         {
-            inst->gui.logoSize.x = floorf(0.35f * inst->wind.m_size.y);
+            inst->gui.logoSize.x = inst->wind.dpi * 300;
             inst->gui.logoSize.y = inst->gui.logoSize.x; 
             int width = (int)inst->gui.logoSize.x;
             int height = width;
@@ -812,7 +812,6 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         }
 
         // Icon
-
         {
             float& fwidth = inst->gui.styleEx.sizes.titleBarHeight;
             int width = (int)fwidth;
@@ -838,6 +837,40 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             inst->gui.icoTexID = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources);
 
             free(logoImg);
+
+        }
+
+        // Mouse Controls Icon
+        {
+
+            NSVGimage* mouseControlsImage = nsvgParseFromFile("Mouse-Controls.svg", "px", 96);
+            assert(mouseControlsImage != NULL && "Failed to open or read Logo.svg");
+            inst->gui.mouseControlsSize.x = inst->wind.dpi * 24.0f;
+            inst->gui.mouseControlsSize.y = 768.0f / 200.0f * inst->gui.mouseControlsSize.x;
+            int width  = (int)inst->gui.mouseControlsSize.x;
+            int height = (int)inst->gui.mouseControlsSize.y;
+            unsigned char* logoImg = (unsigned char*)malloc(width * height * 4);
+            nsvgRasterize(rast, mouseControlsImage, 0, 0, inst->gui.mouseControlsSize.x / 200.0f, logoImg, width, height, width * 4);
+
+            vlknh::TextureImageCreateInfo texImageInfo{};
+            texImageInfo.physicalDevice      = inst->rend.physicalDevice;
+            texImageInfo.commandPool         = inst->rend.commandPool;
+            texImageInfo.graphicsQueue       = inst->rend.graphicsQueue;
+            texImageInfo.descriptorPool      = inst->rend.descriptorPool;
+            texImageInfo.descriptorSetLayout = inst->vpRend.descriptorSetLayout;
+            texImageInfo.sampler             = inst->vpRend.frameSampler;
+            texImageInfo.imageSize           = { (uint32_t)width, (uint32_t)height };
+            texImageInfo.pPixelData          = logoImg;
+
+            vlknh::TextureImageResources texImgResources{};
+            texImgResources.pTexImg     = &inst->vpRend.mouseControlsImg;
+            texImgResources.pTexImgMem  = &inst->vpRend.mouseControlsImgMem;
+            texImgResources.pTexImgView = &inst->vpRend.mouseControlsImgView;
+
+            inst->gui.mouseControlsTexID = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources);
+
+            free(logoImg);
+            nsvgDelete(mouseControlsImage);
 
         }
         nsvgDeleteRasterizer(rast);
@@ -1143,18 +1176,21 @@ void App::close(Core::Instance* inst) {
 
     Gui::destroy(); 
 
-    vkDestroyImageView      (inst->rend.device, inst->vpRend.icoImgView,        nullptr);
-    vkDestroyImage          (inst->rend.device, inst->vpRend.icoImg,            nullptr);
-    vkFreeMemory            (inst->rend.device, inst->vpRend.icoImgMem,         nullptr);
-    vkDestroyImageView      (inst->rend.device, inst->vpRend.logoImgView,       nullptr);
-    vkDestroyImage          (inst->rend.device, inst->vpRend.logoImg,           nullptr);
-    vkFreeMemory            (inst->rend.device, inst->vpRend.logoImgMem,        nullptr);
-    vkDestroyFence          (inst->rend.device, inst->rend.frameFinishedFence,  nullptr);
-    vkDestroySemaphore      (inst->rend.device, inst->rend.renderDoneSemaphore, nullptr);
-    vkDestroySemaphore      (inst->rend.device, inst->rend.imageReadySemaphore, nullptr);
-    vkDestroyDescriptorPool (inst->rend.device, inst->rend.descriptorPool,      nullptr);
-    vkDestroyCommandPool    (inst->rend.device, inst->rend.commandPool,         nullptr);
-    vkDestroyRenderPass     (inst->rend.device, inst->rend.renderPass,          nullptr);
+    vkDestroyImageView      (inst->rend.device, inst->vpRend.icoImgView,           nullptr);
+    vkDestroyImage          (inst->rend.device, inst->vpRend.icoImg,               nullptr);
+    vkFreeMemory            (inst->rend.device, inst->vpRend.icoImgMem,            nullptr);
+    vkDestroyImageView      (inst->rend.device, inst->vpRend.logoImgView,          nullptr);
+    vkDestroyImage          (inst->rend.device, inst->vpRend.logoImg,              nullptr);
+    vkFreeMemory            (inst->rend.device, inst->vpRend.logoImgMem,           nullptr);
+    vkDestroyImageView      (inst->rend.device, inst->vpRend.mouseControlsImgView, nullptr);
+    vkDestroyImage          (inst->rend.device, inst->vpRend.mouseControlsImg,     nullptr);
+    vkFreeMemory            (inst->rend.device, inst->vpRend.mouseControlsImgMem,  nullptr);
+    vkDestroyFence          (inst->rend.device, inst->rend.frameFinishedFence,     nullptr);
+    vkDestroySemaphore      (inst->rend.device, inst->rend.renderDoneSemaphore,    nullptr);
+    vkDestroySemaphore      (inst->rend.device, inst->rend.imageReadySemaphore,    nullptr);
+    vkDestroyDescriptorPool (inst->rend.device, inst->rend.descriptorPool,         nullptr);
+    vkDestroyCommandPool    (inst->rend.device, inst->rend.commandPool,            nullptr);
+    vkDestroyRenderPass     (inst->rend.device, inst->rend.renderPass,             nullptr);
     
     Core::cleanupSwapchainResources(&inst->rend); 
     vkDestroySwapchainKHR(inst->rend.device, inst->rend.swapchain, nullptr);

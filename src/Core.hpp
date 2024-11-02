@@ -101,6 +101,9 @@ struct ViewportsRenderInstance {
     VkImage               icoImg;
     VkDeviceMemory        icoImgMem;
     VkImageView           icoImgView;
+    VkImage               mouseControlsImg;
+    VkDeviceMemory        mouseControlsImgMem;
+    VkImageView           mouseControlsImgView;
     VkDescriptorSet       logoDescriptor;
 
     std::vector<ViewportInstance> vpInstances;

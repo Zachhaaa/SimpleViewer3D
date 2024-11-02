@@ -54,6 +54,7 @@ struct GuiSizes {
 	float wndBtnWidth;
 	float menuBarStartExtent;
 	float menuBarEndExtent;
+	float mouseControlsTextVerticalOffset;
 
 };
 struct GuiColors {
@@ -115,7 +116,9 @@ struct DrawData {
 	GuiStyleEx       styleEx;
 	ImTextureID      logoTexID; 
 	ImTextureID      icoTexID;
+	ImTextureID      mouseControlsTexID;
 	ImVec2           logoSize;
+	ImVec2           mouseControlsSize; 
 	ViewportGuiData* lastFocusedVp;
 	float            sensitivity; 
 #ifdef DEVINFO
