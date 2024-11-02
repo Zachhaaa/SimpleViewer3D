@@ -672,19 +672,20 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
         {
             NCCALCSIZE_PARAMS* pncsp = (NCCALCSIZE_PARAMS*)lParam;
 
-            // Offset the 12 pixel extension when maximized
+            // Offset the pixel extension when maximized
             if (IsZoomed(hwnd)) {
-                pncsp->rgrc[0].left += 7;  
-                pncsp->rgrc[0].top += 7;
-                pncsp->rgrc[0].right -= 7; 
-                pncsp->rgrc[0].bottom -= 7;
+                LONG offset = (LONG)(7 * inst->wind.dpi);
+                pncsp->rgrc[0].left   += offset;
+                pncsp->rgrc[0].top    += offset;
+                pncsp->rgrc[0].right  -= offset;
+                pncsp->rgrc[0].bottom -= offset;
             }
             // Extend the border 1 pixel in for the standard border
             else {
-                pncsp->rgrc[0].left += 0;
-                pncsp->rgrc[0].top += 0;
-                pncsp->rgrc[0].right -= 0;
-                pncsp->rgrc[0].bottom -= 0;
+                pncsp->rgrc[0].left += 1;
+                pncsp->rgrc[0].top += 0; // 0 because a white title bar appear on windows 10 if greater than 0
+                pncsp->rgrc[0].right -= 1;
+                pncsp->rgrc[0].bottom -= 1;
             }
 
             return 0;
