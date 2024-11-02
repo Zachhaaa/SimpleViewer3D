@@ -512,13 +512,13 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
 
                 constexpr float c_defPanSense   = 0.0009f;
                 constexpr float c_defOrbitSense = 0.01f;
-                constexpr float c_defZoomSense  = 0.1f; 
+                constexpr float c_defZoomSense  = 0.15f; 
                 float sensePreferenceMultiplier = data->sensitivity / 100; 
                 if (ImGui::IsWindowHovered()) {
 
                     float zoomSensitivity = c_defZoomSense * sensePreferenceMultiplier;
-                    vpData.zoomDistance += zoomSensitivity * -vpData.zoomDistance * io.MouseWheel;
-                    vpData.zoomDistance = std::clamp(vpData.zoomDistance, vpData.zoomMin, -1.0f);
+                    vpData.zoomDistance += zoomSensitivity * -(vpData.zoomDistance - 1.0f) * io.MouseWheel;
+                    vpData.zoomDistance = std::clamp(vpData.zoomDistance, vpData.zoomMin, 0.0f);
                     if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))  vpData.orbitActive = true;
                     if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) vpData.panActive   = true;
 
