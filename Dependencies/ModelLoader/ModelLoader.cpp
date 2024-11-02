@@ -20,7 +20,7 @@ inline bool charIsDigit(const char c) { return c >= '0' && c <= '9'; }
 static void objGetVec3FromText(const char*& pC, const char* end, float* v) {
 	for (int componentIndex = 0; componentIndex < 3; componentIndex++) { // componentIndex == 0: x, componentIndex == 1: y, componentIndex == 2: z
 
-		for (; *pC != '.' && *pC != ' '; pC++) {}
+		for (; charIsDigit(*pC) || *pC == '-'; pC++) {}
 		float placeHolder = 1.0f;
 		float& value = v[componentIndex];
 		value = 0.0f; 
@@ -29,7 +29,11 @@ static void objGetVec3FromText(const char*& pC, const char* end, float* v) {
 			if (*c == '-') { negative = true; break; };
 			value += (*c - '0') * placeHolder;
 		}
-		if (*pC == ' ') { pC++; continue; }
+		if (*pC != '.') {
+			pC++;
+			if (negative) value = -value;
+			continue; 
+		}
 		pC++;
 
 		placeHolder = 0.1f;
