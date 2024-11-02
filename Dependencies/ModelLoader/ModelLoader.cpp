@@ -4,6 +4,8 @@
 #include <memory>
 #include <cassert> 
 
+#include <glm/glm.hpp>
+
 inline void skipLine(const char*& pC, const char* end) {
 	
 	for (; pC < end; pC++) {
@@ -46,6 +48,12 @@ static uint32_t getUint32FromText(const char* pOnesPlace) {
 	for (const char* c = pOnesPlace; *c != ' ' && *c != '/'; c--, placeHolder *= 10) { value += (*c - '0') * placeHolder; }
 	return value;
 }
+static uint32_t getVertexIndexFromVertexReference(const char*& pC) {
+	for (; charIsDigit(*pC); pC++) {}
+	uint32_t vertexIndex = getUint32FromText(pC - 1);
+	for (; *pC != ' ' && *pC != '\n'; pC++) {} // skip texture coord index 
+	return vertexIndex; 
+}
 static void objGetIndexFromText(const char*& pC, const char* end, mload::ObjVertexIndex* v) {
 
 	for (; *pC != ' ' && *pC != '/'; pC++) {}
@@ -60,6 +68,17 @@ static void objGetIndexFromText(const char*& pC, const char* end, mload::ObjVert
 
 	for (; charIsDigit(*pC); pC++) {}
 	v->normalIndex = getUint32FromText(pC - 1);
+
+}
+static void addVertex(const mload::Vertex& v, mload::Map<mload::Vertex, uint32_t>& uniqueVertices, std::vector<mload::Vertex>& vertexBuff, std::vector<uint32_t>& indexBuff) {
+
+	bool keyExists;
+	uint32_t* pIndex = uniqueVertices.getKeyValue(v, &keyExists);
+	if (!keyExists) {
+		*pIndex = (uint32_t)vertexBuff.size();
+		vertexBuff.push_back(v);
+	}
+	indexBuff.push_back(*pIndex);
 
 }
 
@@ -136,23 +155,23 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 			constexpr size_t floatsPerFacet = 12;
 			float facet[floatsPerFacet];
 			uint32_t floatIndex = 0;
-			for (char* c = fData.get(), *end = c + fileSize; c < end; ++c) {
+			for (char* c = &fData[0], *end = &fData[fileSize]; c < end; c++) {
 				if (*c != '.') continue;
 
 				// first decimal place
 				float value = (float)(c[-1] - '0');
 				// handle negative
 				float negative = c[-2] == '-' ? -1.0f : 1.0f;
-				++c;
+				c++;
 				// Convert significand to float
-				for (float place = 0.1f; *c != 'e'; place *= 0.1f, ++c) {
+				for (float place = 0.1f; *c != 'e'; place *= 0.1f, c++) {
 					value += place * (*c - '0');
 				}
 				value *= negative;
 
 				// Apply exponent
 				c += 4;
-				for (; charIsDigit(*c); ++c);
+				for (; charIsDigit(*c); c++);
 				int exponent = 0;
 				uint32_t digitBase = 1;
 				char* ex_c = &c[-1];
@@ -163,35 +182,19 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 				value *= powf(10.0f, (float)exponent);
 
 				facet[floatIndex] = value;
-				++floatIndex;
+				floatIndex++;
 				if (floatIndex < floatsPerFacet) continue;
 
 				floatIndex = 0;
 
 				Vertex v(*(vec3*)&facet[3], *(vec3*)&facet[0]);
-				bool keyExisted;
-				uint32_t* pIndex = uniqueVertices.getKeyValue(v, &keyExisted);
-				if (!keyExisted) {
-					*pIndex = (uint32_t)vertexBuff->size();
-					vertexBuff->push_back(v);
-				}
-				indexBuff->push_back(*pIndex);
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
 
 				v.pos = *(vec3*)&facet[6];
-				pIndex = uniqueVertices.getKeyValue(v, &keyExisted);
-				if (!keyExisted) {
-					*pIndex = (uint32_t)vertexBuff->size();
-					vertexBuff->push_back(v);
-				}
-				indexBuff->push_back(*pIndex);
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
 
 				v.pos = *(vec3*)&facet[9];
-				pIndex = uniqueVertices.getKeyValue(v, &keyExisted);
-				if (!keyExisted) {
-					*pIndex = (uint32_t)vertexBuff->size();
-					vertexBuff->push_back(v);
-				}
-				indexBuff->push_back(*pIndex);
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
 
 			}
 		} 
@@ -200,92 +203,124 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 			for (char* pFacet = &fData[84], *end = &fData[fileSize]; pFacet < end; pFacet += 50) {
 
 				Vertex v(*(vec3*)&pFacet[12], *(vec3*)&pFacet[0]);
-				bool keyExisted; 
-				uint32_t* pIndex = uniqueVertices.getKeyValue(v, &keyExisted); 
-				if (!keyExisted) {
-					*pIndex = (uint32_t)vertexBuff->size(); 
-					vertexBuff->push_back(v);
-				}
-				indexBuff->push_back(*pIndex);
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
 
 				v.pos = *(vec3*)&pFacet[24];
-				pIndex = uniqueVertices.getKeyValue(v, &keyExisted);
-				if (!keyExisted) {
-					*pIndex = (uint32_t)vertexBuff->size();
-					vertexBuff->push_back(v);
-				}
-				indexBuff->push_back(*pIndex);
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
 
 				v.pos = *(vec3*)&pFacet[36];
-				pIndex = uniqueVertices.getKeyValue(v, &keyExisted);
-				if (!keyExisted) {
-					*pIndex = (uint32_t)vertexBuff->size();
-					vertexBuff->push_back(v);
-				}
-				indexBuff->push_back(*pIndex);
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
 
 			}
 		}
 	}
 	// If (objFile)
 	else {
-		// TODO: run different code if normalsCapacity == 0. Normals are not required in the obj format
-		assert(normalsCapacity > 0); 
-		vec3* const vertexPositions           = (vec3*)malloc(sizeof(vec3) * vertexElementsCapacity); 
+
+		vec3* const vertexPositions           = (vec3*)malloc(sizeof(vec3) * vertexElementsCapacity); assert(vertexPositions != nullptr); 
 		vec3*       vertexPositionsNewElement = vertexPositions; 
-		vec3* const vertexNormals             = (vec3*)malloc(sizeof(vec3) * normalsCapacity); 
+		vec3* const vertexNormals             = normalsCapacity > 0 ? (vec3*)malloc(sizeof(vec3) * normalsCapacity) : nullptr; 
 		vec3*       vertexNormalsNewElement   = vertexNormals; 
-		Map<ObjVertexIndex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), predictedUniqueVertexCount);
 
 		for (const char* c = &fData[0], *end = &fData[fileSize]; c < end;) {
+			if (*c != 'v') { skipLine(c, end); continue; }
 
-			if (*c == 'v') {
-				c++;
-				if (*c == ' ') { 
-					c++; 
-					skipWhitespace(c); 
-					objGetVec3FromText(c, end, (float*)vertexPositionsNewElement);
-					vertexPositionsNewElement++; 
-				}
-				else if (*c == 'n') {
-					c += 2; 
-					skipWhitespace(c); 
-					objGetVec3FromText(c, end, (float*)vertexNormalsNewElement);
-  					vertexNormalsNewElement++; 
-				}
+			c++;
+			if (*c == ' ') { 
+				c++; 
+				skipWhitespace(c); 
+				objGetVec3FromText(c, end, (float*)vertexPositionsNewElement);
+				vertexPositionsNewElement++; 
 			}
-			else {
-				skipLine(c, end); 
+			else if (*c == 'n') {
+				c += 2; 
+				skipWhitespace(c); 
+				objGetVec3FromText(c, end, (float*)vertexNormalsNewElement);
+  				vertexNormalsNewElement++; 
 			}
 
 		}
-		for (const char* c = &fData[0], *end = &fData[fileSize]; c < end;) {  
-			if (*c != 'f') { skipLine(c, end); continue; }
+		if (normalsCapacity > 0) {
 
-			c += 2; 
-			skipWhitespace(c); 
-			uint32_t vertexCountInFacet = 0;
-			for (; c < end && charIsDigit(*c); c++) {
-				mload::ObjVertexIndex vertexIndex;
-				objGetIndexFromText(c, end, &vertexIndex);
-				bool keyExists;
-				uint32_t* pIndex = uniqueVertices.getKeyValue(vertexIndex, &keyExists);
-				if (!keyExists) {
-					*pIndex = (uint32_t)vertexBuff->size(); 
-					// index - 1 to convert to 0 based indexing (.obj format doesn't use 0 based indexing)
-					vertexBuff->emplace_back(vertexPositions[vertexIndex.posIndex - 1], vertexNormals[vertexIndex.normalIndex - 1]);
+			Map<ObjVertexIndex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), predictedUniqueVertexCount);
+
+			for (const char* c = &fData[0], *end = &fData[fileSize]; c < end;) {
+				if (*c != 'f') { skipLine(c, end); continue; }
+
+				c += 2;
+				skipWhitespace(c);
+				uint32_t vertexCountInFacet = 0;
+				for (; c < end && charIsDigit(*c); c++) {
+					mload::ObjVertexIndex vertexIndex;
+					objGetIndexFromText(c, end, &vertexIndex);
+					bool keyExists;
+					uint32_t* pIndex = uniqueVertices.getKeyValue(vertexIndex, &keyExists);
+					if (!keyExists) {
+						*pIndex = (uint32_t)vertexBuff->size();
+						// index - 1 to convert to 0 based indexing (.obj format doesn't use 0 based indexing)
+						vertexBuff->emplace_back(vertexPositions[vertexIndex.posIndex - 1], vertexNormals[vertexIndex.normalIndex - 1]);
+					}
+					vertexCountInFacet++;
+					if (vertexCountInFacet > 3) {
+						indexBuff->push_back((*indexBuff)[indexBuff->size() - 3 * (vertexCountInFacet - 3)]);
+						indexBuff->push_back((*indexBuff)[indexBuff->size() - 2]);
+					}
+					indexBuff->push_back(*pIndex);
+
 				}
-				vertexCountInFacet++;
-				if (vertexCountInFacet > 3) {
-					indexBuff->push_back((*indexBuff)[indexBuff->size() - vertexCountInFacet + 1]);
+			}
+
+		}
+		else {
+
+			Map<Vertex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), predictedUniqueVertexCount);
+
+			for (const char* c = &fData[0], *end = &fData[fileSize]; c < end;) {
+				if (*c != 'f') { skipLine(c, end); continue; }
+
+				c += 2;
+				uint32_t facetIndices[3]; 
+				for (int facetIndex = 0; facetIndex < 3; facetIndex++) {
+					skipWhitespace(c);
+					facetIndices[facetIndex] = getVertexIndexFromVertexReference(c); 
+				}
+				const glm::vec3& p1 = *(glm::vec3*)&vertexPositions[facetIndices[0] - 1];
+				const glm::vec3& p2 = *(glm::vec3*)&vertexPositions[facetIndices[1] - 1];
+				const glm::vec3& p3 = *(glm::vec3*)&vertexPositions[facetIndices[2] - 1];
+				Vertex v; 
+				v.pos    = *(vec3*)&p1;
+				v.normal = *(vec3*)&glm::normalize(glm::cross(p2 - p1, p3 - p1)); 
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff); 
+
+				v.pos = *(vec3*)&p2;
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
+
+				v.pos = *(vec3*)&p3;
+				addVertex(v, uniqueVertices, *vertexBuff, *indexBuff);
+				
+				// if there are more than 3 vertex references in a facet
+				for (int fanCenterIndexOffset = 3; *c == ' ' && charIsDigit(c[1]); fanCenterIndexOffset += 3) {
+					c++;
+					uint32_t vertexIndex = getVertexIndexFromVertexReference(c); 
+
+					v.pos = vertexPositions[vertexIndex - 1];
+					bool keyExists; 
+					uint32_t* pIndex = uniqueVertices.getKeyValue(v, &keyExists);
+					if (!keyExists) {
+						*pIndex = (uint32_t)vertexBuff->size();
+						vertexBuff->push_back(v);
+					}
+					indexBuff->push_back((*indexBuff)[indexBuff->size() - fanCenterIndexOffset]);
 					indexBuff->push_back((*indexBuff)[indexBuff->size() - 2]);
+					indexBuff->push_back(*pIndex);
+				
 				}
-				indexBuff->push_back(*pIndex);
 
 			}
+
 		}
+
 		free(vertexPositions); 
-		// TODO change free handler when you adjust to compute normals when not givin in the file
 		if (vertexNormals != nullptr) free(vertexNormals); 
 
 	}
