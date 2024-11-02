@@ -464,8 +464,9 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
         if (ImGui::Begin(vpData.objectName.get(), &vpData.open, windFlags)) {
             bool focus = ImGui::IsWindowFocused(); 
             bool wKey = ImGui::IsKeyPressed(ImGuiKey_W, false); 
-            if (focus && io.KeyCtrl && wKey) vpData.open = false;
             data->lastFocusedVp = &vpData;
+            if (io.KeyCtrl && wKey) data->lastFocusedVp->open = false;
+
 
             ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
 
