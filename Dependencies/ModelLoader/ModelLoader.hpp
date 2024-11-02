@@ -9,6 +9,7 @@ namespace mload {
 		SUCCESS = 0, 
 		WRONG_FILE_FORMAT, // Must be obj or stl. 
 		COULD_NOT_OPEN_FILE, // fopen from cstdio returned nullptr (failed) 
+		NO_DATA_FROM_FILE,
 
 	};
 

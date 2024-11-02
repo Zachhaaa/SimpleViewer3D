@@ -5,9 +5,11 @@ mload::Map<K, V>::Map(size_t _bucketCount, size_t predictedElementCount)
 : m_bucketCount(_bucketCount), m_capacity(predictedElementCount) 
 {
 	
-	m_buckets = new LinkedListItem*[_bucketCount]; 
+	assert(_bucketCount> 0);
+	m_buckets = new LinkedListItem*[_bucketCount];
 	memset(m_buckets, 0, sizeof(LinkedListItem*) * _bucketCount); 
 	
+	assert(predictedElementCount > 0); 
 	m_freeElement = new LinkedListItem[predictedElementCount]; 
 	m_elementAllocs.push_back(m_freeElement); 
 

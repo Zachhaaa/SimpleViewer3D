@@ -3,59 +3,39 @@
 #include <cstdio>
 #include <memory>
 #include <cassert> 
-#include <unordered_map>
 
-namespace std {
-	template<> struct hash<mload::Vertex> {
-		size_t operator()(mload::Vertex const& v) const {
-			size_t h1 = std::hash<float>{}(v.pos.x);
-			size_t h2 = std::hash<float>{}(v.pos.y);
-			size_t h3 = std::hash<float>{}(v.pos.z);
-			size_t h4 = std::hash<float>{}(v.normal.x);
-			size_t h5 = std::hash<float>{}(v.normal.y);
-			size_t h6 = std::hash<float>{}(v.normal.z);
+inline void skipLine(const char*& pC, const char* end) {
+	
+	for (; pC < end; pC++) {
+		if (*pC == '\n') { pC++; break; }
+	}
 
-			size_t result = h1;
-			result ^= h2 + 0x9e3779b9 + (result << 6) + (result >> 2);
-			result ^= h3 + 0x9e3779b9 + (result << 6) + (result >> 2);
-			result ^= h4 + 0x9e3779b9 + (result << 6) + (result >> 2);
-			result ^= h5 + 0x9e3779b9 + (result << 6) + (result >> 2);
-			result ^= h6 + 0x9e3779b9 + (result << 6) + (result >> 2);
-
-			return result; 
-		}
-	};
 }
-/// Get the next 3 float values in a string from an obj file
+inline void skipWhitespace(const char*& pC) {
+	for (; *pC == ' '; pC++) {}
+}
 inline bool charIsDigit(const char c) { return c >= '0' && c <= '9'; } 
-/// @param str string to read floats from
-/// @param i pointer to the index in the data. 
-/// @param v pointer to the first element(x) in a vec3
-static void objGetVec3FromText(const char* str, uint32_t* i, uint32_t fileSize, float* v) {
+static void objGetVec3FromText(const char*& pC, const char* end, float* v) {
 	for (int componentIndex = 0; componentIndex < 3; componentIndex++) { // componentIndex == 0: x, componentIndex == 1: y, componentIndex == 2: z
 
-		bool endOfNumber;
-		while (true) {
-			endOfNumber = str[*i] == ' ' || str[*i] == '\n' || str[*i] == '\r';
-			if (endOfNumber || str[*i] == '.') break;
-			(*i)++; 
-		}
+		for (; *pC != '.' && *pC != ' '; pC++) {}
 		float placeHolder = 1.0f;
 		float& value = v[componentIndex];
 		value = 0.0f; 
-		for (const char* c = &str[*i - 1]; *c != ' '; c--, placeHolder *= 10.0f) {
-			if (*c == '-') { value = -value ; break; }
+		bool negative = false; 
+		for (const char* c = pC - 1; *c != ' '; c--, placeHolder *= 10.0f) {
+			if (*c == '-') { negative = true; break; };
 			value += (*c - '0') * placeHolder;
 		}
-		if (str[*i] == ' ') { (*i)++; continue; }
-		else if (endOfNumber) continue; 
-		(*i)++;
+		if (*pC == ' ') { pC++; continue; }
+		pC++;
 
-		placeHolder = value > 0 ? 0.1f : -0.1f;
-		for (; charIsDigit(str[*i]) && *i < fileSize; (*i)++, placeHolder /= 10.0f) {
-			value += (str[*i] - '0') * placeHolder;
+		placeHolder = 0.1f;
+		for (; charIsDigit(*pC) && pC < end; pC++, placeHolder /= 10.0f) {
+			value += (*pC - '0') * placeHolder;
 		}
-		(*i)++; 
+		if (negative) value = -value; 
+		pC++; 
 
 	}
 }
@@ -66,26 +46,20 @@ static uint32_t getUint32FromText(const char* pOnesPlace) {
 	for (const char* c = pOnesPlace; *c != ' ' && *c != '/'; c--, placeHolder *= 10) { value += (*c - '0') * placeHolder; }
 	return value;
 }
-static void objGetIndexFromText(const char* str, uint32_t* i, uint32_t fileSize, mload::ObjVertexIndex* v) {
+static void objGetIndexFromText(const char*& pC, const char* end, mload::ObjVertexIndex* v) {
 
-	for (; str[*i] != ' ' && str[*i] != '/'; (*i)++) {}
+	for (; *pC != ' ' && *pC != '/'; pC++) {}
 
-	v->posIndex = getUint32FromText(&str[*i - 1]);
-	if (str[*i] == ' ') {
-		v->normalIndex = 1; // TODO: I need to handle no vertex normal index differently.
-	}
-	else {
+	v->posIndex = getUint32FromText(pC - 1);
 
-		// Skip the next two slashes. 
-		for (; str[*i] != '/'; (*i)++) {} 
-		(*i)++;
-		for (; str[*i] != '/'; (*i)++) {} 
-		(*i)++;
+	// Skip the next two slashes. 
+	for (; *pC != '/'; pC++) {} 
+	pC++;
+	for (; *pC!= '/'; pC++) {} 
+	pC++;
 
-		for (; charIsDigit(str[*i]); (*i)++) {}
-		v->normalIndex = getUint32FromText(&str[*i - 1]); 
-	}
-
+	for (; charIsDigit(*pC); pC++) {}
+	v->normalIndex = getUint32FromText(pC - 1);
 
 }
 
@@ -105,17 +79,17 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 	std::unique_ptr<char[]> fData(new char[fileSize]);
 	fread(fData.get(), 1, fileSize, file);
 
-	uint32_t vertexElementsCapacity = 0; 
-	uint32_t indexElementsCapacity  = 0; // .obj use only
+	uint32_t indexElementsCapacity  = 0; 
+	uint32_t vertexElementsCapacity = 0; // .obj use only
 	uint32_t normalsCapacity        = 0; // .obj use only
-
+	// Get file data counts to presize buffers
 	if (stlFile) {
 		uint32_t facetCount = 0; 
-		if (memcmp(fData.get(), "solid", 5) == 0) {
+		if (memcmp(fData.get(), "solid", 5) == 0) { // if ascii
 			facetCount = (fileSize / 258 + 1);
 			*isTextFormat = true;
 		}
-		else {
+		else { // if binary
 			facetCount = *(uint32_t*)&fData[80];
 			*isTextFormat = false;
 		}
@@ -124,40 +98,40 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 	// If (objFile)
 	else {
 		*isTextFormat = true; 
-		for (uint32_t i = 0; i < fileSize; i++) {
+		for (const char* c = &fData[0], *end = &fData[fileSize]; c < end;) {
 			
-			if(fData[i] == 'v') {
-				i++;
-				if      (fData[i] == ' ') vertexElementsCapacity++;
-				else if (fData[i] == 'n') normalsCapacity++;
-				i+= 6; // 6 = minimum line length after 'v' so we jump it.
-				for (; i < fileSize; i++) { if (fData[i] == '\n') break; }
+			if(*c == 'v') {
+				c++; 
+				if      (*c == ' ') vertexElementsCapacity++;
+				else if (*c == 'n') normalsCapacity++;
+				c += 6; // 6 = minimum line length after 'v' so we jump it.
+				skipLine(c, end); 
 			}
-			else if (fData[i] == 'f') {  
-				i++;
-				for (uint32_t indexCount = 0; i < fileSize - 1; i++) {
-					if (fData[i] == '\n') {
-						if(fData[i] )
-						break;
-					}
-					if (fData[i] == ' ' && charIsDigit(fData[i + 1])) {
-						indexCount++; // BOOKMARK: fix the space before the newline counting as an additional index.  
+			else if (*c == 'f') {  
+				c++; 
+				for (uint32_t indexCount = 0; *c != '\n' && c < end; c++) {
+					if (*c == ' ' && charIsDigit(c[1])) {
+						indexCount++;  
       					indexElementsCapacity += indexCount > 3 ? 3 : 1;
 					}
 				}
 			}
 			else {
-				for (; i < fileSize; i++) { if (fData[i] == '\n') break; }
+				skipLine(c, end); 
 			}
 
 		}
 	}
 
-	// TODO: clean up the nesting in the stl code.
+	if (indexElementsCapacity == 0) return Success::NO_DATA_FROM_FILE; 
+
+	uint32_t predictedUniqueVertexCount = (uint32_t)(0.9f * indexElementsCapacity); 
 	indexBuff->reserve(indexElementsCapacity); 
-	vertexBuff->reserve((size_t)(0.9f * indexElementsCapacity));
+	vertexBuff->reserve(predictedUniqueVertexCount);
+
+	// Parsing / reading
 	if (stlFile) {
-		Map<Vertex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), vertexElementsCapacity);
+		Map<Vertex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), predictedUniqueVertexCount);
 		if (*isTextFormat) {
 			constexpr size_t floatsPerFacet = 12;
 			float facet[floatsPerFacet];
@@ -259,48 +233,46 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 		assert(normalsCapacity > 0); 
 		vec3* const vertexPositions           = (vec3*)malloc(sizeof(vec3) * vertexElementsCapacity); 
 		vec3*       vertexPositionsNewElement = vertexPositions; 
-		vec3* const vertexNormals             = normalsCapacity > 0 ? (vec3*)malloc(sizeof(vec3) * normalsCapacity) : nullptr; 
+		vec3* const vertexNormals             = (vec3*)malloc(sizeof(vec3) * normalsCapacity); 
 		vec3*       vertexNormalsNewElement   = vertexNormals; 
-		Map<ObjVertexIndex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), vertexElementsCapacity);
+		Map<ObjVertexIndex, uint32_t> uniqueVertices((size_t)(1.5 * indexElementsCapacity), predictedUniqueVertexCount);
 
-		uint32_t facetSectionIndex = 0;
-		for (uint32_t i = 0; i < fileSize; i++) {
-			// TODO: try this to see if it is faster at parsing if (*(int16_t*)&fData[i] == ('v' | ' ' << 8))
-			if (fData[i] == 'v') {
-				i++;
-				if (fData[i] == ' ') { 
-					do { i++; } while (fData[i] == ' ');
-					objGetVec3FromText(fData.get(), &i, fileSize, (float*)vertexPositionsNewElement);
+		for (const char* c = &fData[0], *end = &fData[fileSize]; c < end;) {
+
+			if (*c == 'v') {
+				c++;
+				if (*c == ' ') { 
+					c++; 
+					skipWhitespace(c); 
+					objGetVec3FromText(c, end, (float*)vertexPositionsNewElement);
 					vertexPositionsNewElement++; 
 				}
-				else if (fData[i] == 'n') {
-					i += 2; 
-					for (; fData[i] == ' '; i++) {}
-					objGetVec3FromText(fData.get(), &i, fileSize, (float*)vertexNormalsNewElement);
-  					vertexNormalsNewElement++; // bookmark: check normal parsing and then facet parsing. 
+				else if (*c == 'n') {
+					c += 2; 
+					skipWhitespace(c); 
+					objGetVec3FromText(c, end, (float*)vertexNormalsNewElement);
+  					vertexNormalsNewElement++; 
 				}
 			}
-			// break if the vertex position and normals have been filled.
-			else if (fData[i] == 'f' && vertexPositions != vertexPositionsNewElement && vertexNormals != vertexNormalsNewElement) { 
-				facetSectionIndex = i; 
-				break; 
-			}
 			else {
-				for (; i < fileSize; i++) { if (fData[i] == '\n') break; }
+				skipLine(c, end); 
 			}
+
 		}
-		for (uint32_t i = facetSectionIndex; i < fileSize;) {
+		for (const char* c = &fData[0], *end = &fData[fileSize]; c < end;) {  
+			if (*c != 'f') { skipLine(c, end); continue; }
+
+			c += 2; 
+			skipWhitespace(c); 
 			uint32_t vertexCountInFacet = 0;
-			for (; i < fileSize; i++) { if (fData[i-1] == '\n' && fData[i] == 'f') break; }
-			do { i++; } while (fData[i] == ' '); // jump whitespace
-			for (; i < fileSize && charIsDigit(fData[i]); i++) {
+			for (; c < end && charIsDigit(*c); c++) {
 				mload::ObjVertexIndex vertexIndex;
-				objGetIndexFromText(fData.get(), &i, fileSize, &vertexIndex);
+				objGetIndexFromText(c, end, &vertexIndex);
 				bool keyExists;
 				uint32_t* pIndex = uniqueVertices.getKeyValue(vertexIndex, &keyExists);
 				if (!keyExists) {
 					*pIndex = (uint32_t)vertexBuff->size(); 
-					// - 1 to convert to 0 based indexing (.obj format doesn't use 0 based indexing)
+					// index - 1 to convert to 0 based indexing (.obj format doesn't use 0 based indexing)
 					vertexBuff->emplace_back(vertexPositions[vertexIndex.posIndex - 1], vertexNormals[vertexIndex.normalIndex - 1]);
 				}
 				vertexCountInFacet++;
@@ -313,6 +285,7 @@ mload::Success mload::openModel(const char* fileName, std::vector<Vertex>* verte
 			}
 		}
 		free(vertexPositions); 
+		// TODO change free handler when you adjust to compute normals when not givin in the file
 		if (vertexNormals != nullptr) free(vertexNormals); 
 
 	}
