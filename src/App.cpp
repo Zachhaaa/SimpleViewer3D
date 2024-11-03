@@ -23,6 +23,11 @@
 struct PushConstants {
     glm::mat4 view, proj; 
 };
+#ifdef DEBUG
+#define assertExit(cond, msg) CORE_ASSERT(cond && msg); 
+#else 
+#define assertExit(cond, msg) if (!(cond)) exit(1); 
+#endif
 
 void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
@@ -92,14 +97,14 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             NULL
         );
 
-        CORE_ASSERT(inst->wind.hwnd != NULL && "Window Creation Failed");
+        assertExit(inst->wind.hwnd != NULL, "Window Creation Failed");
 
         SetWindowLongPtr(inst->wind.hwnd, GWLP_USERDATA, (LONG_PTR)inst);
 
         DEVMODE devMode;
         devMode.dmSize = sizeof(devMode);
         BOOL err = EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &devMode);
-        CORE_ASSERT(err && "EnumDisplaySettings failed");
+        assertExit(err, "EnumDisplaySettings failed");
         inst->wind.refreshInterval = 1.0f / devMode.dmDisplayFrequency;
 
     }
@@ -134,7 +139,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
                     goto extensionExists;
                 }
             }
-            CORE_ASSERT(!"An extension in entensionNames does not exist.");
+            assertExit(0, "An extension in entensionNames does not exist.");
         extensionExists:;
         }
 
@@ -158,7 +163,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
                 }
 
             }
-            CORE_ASSERT(!"A validation Layer in desiredLayers does not exist.");
+            assertExit(0, "A validation Layer in desiredLayers does not exist.");
         layerExists:;
         }
         createInfo.enabledLayerCount = arraySize(desiredLayers);
@@ -178,12 +183,12 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 #endif
 
         VkResult err = vkCreateInstance(&createInfo, nullptr, &inst->rend.instance);
-        CORE_ASSERT(err == VK_SUCCESS && "Vulkan instance creation failed");
+        assertExit(err == VK_SUCCESS,"Vulkan instance creation failed");
 
 #ifdef ENABLE_VK_VALIDATION_LAYERS
 
         err = Core::CreateDebugUtilsMessengerEXT(inst->rend.instance, &validationCreateInfo, nullptr, &inst->rend.debugMessenger);
-        CORE_ASSERT(err == VK_SUCCESS && "CreateDebugUtilsMessengerEXT failed");
+        assertExit(err == VK_SUCCESS, "CreateDebugUtilsMessengerEXT failed");
 
 #endif 
     }
@@ -197,7 +202,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         createInfo.hinstance = initInfo.hInstance;
 
         VkResult err = vkCreateWin32SurfaceKHR(inst->rend.instance, &createInfo, nullptr, &inst->rend.surface);
-        CORE_ASSERT(err == VK_SUCCESS && "Surface creation failed");
+        assertExit(err == VK_SUCCESS, "Surface creation failed");
 
     }
 
@@ -208,7 +213,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         vkEnumeratePhysicalDevices(inst->rend.instance, &deviceCount, nullptr);
         std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
         vkEnumeratePhysicalDevices(inst->rend.instance, &deviceCount, physicalDevices.data());
-        CORE_ASSERT(deviceCount > 0);
+        assertExit(deviceCount > 0, "No vulkan compatable GPUs");
 
         std::vector<VkPhysicalDevice> compatableDevices;
         compatableDevices.reserve(deviceCount);
@@ -287,7 +292,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
             compatableDevices.push_back(queriedDevice);
         }
-        CORE_ASSERT(compatableDevices.size() > 0);
+        assertExit(compatableDevices.size() > 0, "No application compatable GPUs");
         for (VkPhysicalDevice compatableDevice : compatableDevices) {
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(compatableDevice, &deviceProperties);
@@ -337,7 +342,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 #endif
 
         VkResult err = vkCreateDevice(inst->rend.physicalDevice, &createInfo, nullptr, &inst->rend.device);
-        CORE_ASSERT(err == VK_SUCCESS && "Logical device creation failed");
+        assertExit(err == VK_SUCCESS, "Logical device creation failed");
 
 
     }
@@ -397,7 +402,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         renderPassInfo.pDependencies   = &dependency;
 
         VkResult err = vkCreateRenderPass(inst->rend.device, &renderPassInfo, nullptr, &inst->rend.renderPass);
-        CORE_ASSERT(err == VK_SUCCESS && "Render pass creation failed");
+        assertExit(err == VK_SUCCESS, "Render pass creation failed");
 
     }
 
@@ -412,7 +417,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         createInfo.queueFamilyIndex = inst->rend.graphicsQueueIndex;
 
         VkResult err = vkCreateCommandPool(inst->rend.device, &createInfo, nullptr, &inst->rend.commandPool);
-        CORE_ASSERT(err == VK_SUCCESS && "Command pool creation failed");
+        assertExit(err == VK_SUCCESS, "Command pool creation failed");
 
     }
 
@@ -426,7 +431,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         allocInfo.commandBufferCount = 1;
 
         VkResult err = vkAllocateCommandBuffers(inst->rend.device, &allocInfo, &inst->rend.commandBuff);
-        CORE_ASSERT(err == VK_SUCCESS && "Command buffer allocation failed");
+        assertExit(err == VK_SUCCESS, "Command buffer allocation failed");
 
     }
 
@@ -445,7 +450,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         poolInfo.pPoolSizes    = &poolSizeInfo;
 
         VkResult err = vkCreateDescriptorPool(inst->rend.device, &poolInfo, nullptr, &inst->rend.descriptorPool);
-        CORE_ASSERT(err == VK_SUCCESS && "Descriptor pool creation failed");
+        assertExit(err == VK_SUCCESS, "Descriptor pool creation failed");
 
     }
 
@@ -457,14 +462,14 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
         VkResult err1 = vkCreateSemaphore(inst->rend.device, &semaphoreInfo, nullptr, &inst->rend.imageReadySemaphore);
         VkResult err2 = vkCreateSemaphore(inst->rend.device, &semaphoreInfo, nullptr, &inst->rend.renderDoneSemaphore);
-        CORE_ASSERT((err1 == VK_SUCCESS || err2 == VK_SUCCESS) && "Semaphore creation failed");
+        assertExit((err1 == VK_SUCCESS || err2 == VK_SUCCESS), "Semaphore creation failed");
 
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         VkResult err = vkCreateFence(inst->rend.device, &fenceInfo, nullptr, &inst->rend.frameFinishedFence);
-        CORE_ASSERT(err == VK_SUCCESS && "Fence Creation failed");
+        assertExit(err == VK_SUCCESS, "Fence Creation failed");
 
     }
 
@@ -544,7 +549,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             renderPassInfo.pDependencies   = &dependency;
 
             VkResult err = vkCreateRenderPass(inst->rend.device, &renderPassInfo, nullptr, &inst->vpRend.renderPass);
-            CORE_ASSERT(err == VK_SUCCESS && "Render pass creation failed");
+            assertExit(err == VK_SUCCESS, "Render pass creation failed");
 
         }
 
@@ -560,7 +565,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
             VkShaderModule vertModule;
             VkResult err = vkCreateShaderModule(inst->rend.device, &vertModuleCreateInfo, nullptr, &vertModule);
-            CORE_ASSERT(err == VK_SUCCESS && "Vertex Module Creation failed");
+            assertExit(err == VK_SUCCESS, "Vertex Module Creation failed");
 
             shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             shaderStages[0].flags = 0;
@@ -575,7 +580,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
             VkShaderModule fragModule;
             err = vkCreateShaderModule(inst->rend.device, &fragModuleCreateInfo, nullptr, &fragModule);
-            CORE_ASSERT(err == VK_SUCCESS && "Vertex Module Creation failed");
+            assertExit(err == VK_SUCCESS, "Vertex Module Creation failed");
 
             shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             shaderStages[1].flags = 0;
@@ -671,7 +676,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             pipelineLayoutInfo.pPushConstantRanges    = &pcRange;
 
             err = vkCreatePipelineLayout(inst->rend.device, &pipelineLayoutInfo, nullptr, &inst->vpRend.pipelineLayout);
-            CORE_ASSERT(err == VK_SUCCESS && "Failed to create pipeline layout");
+            assertExit(err == VK_SUCCESS, "Failed to create pipeline layout");
 
             VkGraphicsPipelineCreateInfo pipelineInfo{};
             pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -693,7 +698,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
             err = vkCreateGraphicsPipelines(inst->rend.device, nullptr, 1, &pipelineInfo, nullptr, &inst->vpRend.graphicsPipeline);
-            CORE_ASSERT(err == VK_SUCCESS && "Failed to create graphics pipeline");
+            assertExit(err == VK_SUCCESS, "Failed to create graphics pipeline");
 
             vkDestroyShaderModule(inst->rend.device, vertModule, nullptr);
             vkDestroyShaderModule(inst->rend.device, fragModule, nullptr);
@@ -725,7 +730,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
             VkResult err = vkCreateSampler(inst->rend.device, &samplerInfo, nullptr, &inst->vpRend.frameSampler);
-            CORE_ASSERT(err == VK_SUCCESS && "Sampler creation failed");
+            assertExit(err == VK_SUCCESS, "Sampler creation failed");
 
         }
 
@@ -746,7 +751,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             layoutInfo.pBindings    = &samplerLayoutBinding;
 
             VkResult err = vkCreateDescriptorSetLayout(inst->rend.device, &layoutInfo, nullptr, &inst->vpRend.descriptorSetLayout);
-            CORE_ASSERT(err == VK_SUCCESS && "Descriptor set layout creation failed");
+            assertExit(err == VK_SUCCESS, "Descriptor set layout creation failed");
 
         }
 
@@ -776,7 +781,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         
 
         NSVGimage* image = nsvgParseFromFile("Logo.svg", "px", 96);
-        assert(image != NULL && "Failed to open or read Logo.svg");
+        assertExit(image != NULL, "Failed to open or read Logo.svg");
 
         scopedTimer(t2, &inst->gui.stats.perfTimes.logoRasterize);
 
@@ -844,7 +849,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         {
 
             NSVGimage* mouseControlsImage = nsvgParseFromFile("Mouse-Controls.svg", "px", 96);
-            assert(mouseControlsImage != NULL && "Failed to open or read Logo.svg");
+            assertExit(mouseControlsImage != NULL, "Failed to open or read Logo.svg");
             inst->gui.mouseControlsSize.x = inst->wind.dpi * 24.0f;
             inst->gui.mouseControlsSize.y = 768.0f / 200.0f * inst->gui.mouseControlsSize.x;
             int width  = (int)inst->gui.mouseControlsSize.x;
