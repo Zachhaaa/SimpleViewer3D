@@ -540,8 +540,8 @@ bool Core::openMeshFile(Instance* inst, const char* file) {
 
     newVpData.objectName.reset(new char[(int)(i - fileTitle) + 1]);
     strcpy(newVpData.objectName.get(), fileTitle);
-    newVpData.triangleCount = (uint32_t)indices.size();
-    newVpData.uniqueTriangleCount = (uint32_t)vertices.size();
+    newVpData.indexCount = (uint32_t)indices.size();
+    newVpData.uniqueVertexCount = (uint32_t)vertices.size();
     newVpData.isTextFormat = isTextFormat;
 
     return true;

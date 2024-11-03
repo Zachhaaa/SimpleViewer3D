@@ -1073,7 +1073,7 @@ void App::render(Core::Instance* inst) {
 
             vkCmdPushConstants(inst->rend.commandBuff, inst->vpRend.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof pushConstants, &pushConstants);
 
-            vkCmdDrawIndexed(inst->rend.commandBuff, vpData.triangleCount, 1, 0, 0, 0);
+            vkCmdDrawIndexed(inst->rend.commandBuff, vpData.indexCount, 1, 0, 0, 0);
 
             vkCmdEndRenderPass(inst->rend.commandBuff);
 

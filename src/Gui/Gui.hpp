@@ -103,8 +103,8 @@ struct ViewportGuiData {
 	float                   farPlaneClip;
 	ImVec2                  size;
 	ImTextureID             framebufferTexID; 
-	uint32_t                triangleCount;
-	uint32_t                uniqueTriangleCount;
+	uint32_t                indexCount;
+	uint32_t                uniqueVertexCount;
 	bool                    isTextFormat; 
 
 	glm::vec2& panPos() { return *(glm::vec2*)&model[3]; }
