@@ -31,10 +31,10 @@ namespace Core {
 // structs
 struct WindowInstance {
 
-    HWND                hwnd;
-    glm::ivec2          m_size; // units: pixels
-    float               dpi;  // set by display scaling
-    float              refreshInterval;
+    HWND       hwnd;
+    glm::ivec2 m_size; // units: pixels
+    float      dpi;  // set by display scaling
+    float      refreshInterval;
 
 };
 

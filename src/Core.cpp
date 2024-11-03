@@ -647,6 +647,10 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
         return 0; 
     }
+    case WM_MOVING: {
+        App::render(inst);
+        return 0;
+    }
     case WM_ACTIVATE: {
         RECT rcClient;
         GetWindowRect(hwnd, &rcClient);

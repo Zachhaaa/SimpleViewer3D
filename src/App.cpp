@@ -1,5 +1,6 @@
 #include "App.hpp"
 #include "CoreConstants.hpp"
+#include "CustomIniData.hpp"
 
 #include <ShellScalingApi.h>
 
@@ -45,6 +46,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 #endif
     }
 
+    bool maximized = false; 
     // Window creation
     {
         SetProcessDPIAware();
@@ -63,24 +65,42 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         UINT dpiX, dpiY;
         GetDpiForMonitor(mntr, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
         inst->wind.dpi = float(dpiX / 96.0);
+        
+        int startPosX; 
+        int startPosY; 
+        CustomIniData iniData{};
+        inst->gui.sensitivity = 50; 
+        bool dataExists = getCustomIniData(&iniData);
+        if (dataExists && (iniData.windowWidth != 0 && iniData.windowHeight != 0)) {
 
-        int mntrWidth  = GetSystemMetrics(SM_CXSCREEN);
-        int mntrHeight = GetSystemMetrics(SM_CYSCREEN);
-
-        CORE_ASSERT(c_WindowPercentSize > 0.0 && c_WindowPercentSize <= 1.0);
-        CORE_ASSERT(c_WindowAspectRatio > 0.0);
-
-        if (mntrWidth > mntrHeight) {
-            inst->wind.m_size.y = int(c_WindowPercentSize * mntrHeight);
-            inst->wind.m_size.x = int(c_WindowAspectRatio * inst->wind.m_size.y);
+            inst->gui.sensitivity = (float)iniData.sensitivity;
+            startPosX             = iniData.windowPosX;
+            startPosY             = iniData.windowPosY;
+            inst->wind.m_size.x   = iniData.windowWidth; 
+            inst->wind.m_size.y   = iniData.windowHeight; 
+            maximized             = iniData.windowMaximized;  
         }
         else {
-            inst->wind.m_size.x = int(c_WindowPercentSize * mntrWidth);
-            inst->wind.m_size.y = int(inst->wind.m_size.x / c_WindowAspectRatio);
-        }
 
-        int startPosX = int(0.5 * (mntrWidth  - inst->wind.m_size.x));
-        int startPosY = int(0.5 * (mntrHeight - inst->wind.m_size.y));
+            int mntrWidth  = GetSystemMetrics(SM_CXSCREEN);
+            int mntrHeight = GetSystemMetrics(SM_CYSCREEN);
+
+            CORE_ASSERT(c_WindowPercentSize > 0.0 && c_WindowPercentSize <= 1.0);
+            CORE_ASSERT(c_WindowAspectRatio > 0.0);
+
+            if (mntrWidth > mntrHeight) {
+                inst->wind.m_size.y = int(c_WindowPercentSize * mntrHeight);
+                inst->wind.m_size.x = int(c_WindowAspectRatio * inst->wind.m_size.y);
+            }
+            else {
+                inst->wind.m_size.x = int(c_WindowPercentSize * mntrWidth);
+                inst->wind.m_size.y = int(inst->wind.m_size.x / c_WindowAspectRatio);
+            }
+
+            startPosX = int(0.5 * (mntrWidth  - inst->wind.m_size.x));
+            startPosY = int(0.5 * (mntrHeight - inst->wind.m_size.y));
+          
+        }
 
         inst->wind.hwnd = CreateWindowEx(
             0,
@@ -445,7 +465,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        poolInfo.maxSets       = c_vlkn::maxSets;
+        poolInfo.maxSets       = c_vlkn::maxSets; // TODO: prevent the user from creating too many tabs and overflowing the descriptor pool
         poolInfo.poolSizeCount = 1;
         poolInfo.pPoolSizes    = &poolSizeInfo;
 
@@ -762,8 +782,6 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
     // GUI initialization
     {
 
-        inst->gui.sensitivity = 50.0f;
-
         Gui::InitInfo guiInitInfo{}; 
         guiInitInfo.hwnd               = inst->wind.hwnd;
         guiInitInfo.instance           = inst->rend.instance;
@@ -908,7 +926,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
     }
 
     // All init code goes above this function. 
-    ShowWindow(inst->wind.hwnd, initInfo.nCmdShow);
+    ShowWindow(inst->wind.hwnd, maximized ? SW_MAXIMIZE : initInfo.nCmdShow);
      
 }
 
@@ -1179,7 +1197,30 @@ void App::close(Core::Instance* inst) {
 
     }
 
-    Gui::destroy(); 
+    Gui::destroy();
+
+    // set custom out data. 
+    {
+
+        CustomIniData dataOut; 
+
+        dataOut.sensitivity     = inst->gui.sensitivity;
+        dataOut.windowMaximized = !!IsZoomed(inst->wind.hwnd);
+
+        WINDOWPLACEMENT wp;
+        GetWindowPlacement(inst->wind.hwnd, &wp);
+
+        dataOut.windowWidth     = wp.rcNormalPosition.right  - wp.rcNormalPosition.left;
+        dataOut.windowHeight    = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top;
+        dataOut.windowPosX      = wp.rcNormalPosition.left; 
+        if (dataOut.windowPosX < 0) dataOut.windowPosX = 0;
+        dataOut.windowPosY      = wp.rcNormalPosition.top;
+        if (dataOut.windowPosY < 0) dataOut.windowPosY = 0;
+
+
+        setCustomIniData(dataOut); 
+
+    }
 
     vkDestroyImageView      (inst->rend.device, inst->vpRend.icoImgView,           nullptr);
     vkDestroyImage          (inst->rend.device, inst->vpRend.icoImg,               nullptr);
