@@ -37,6 +37,7 @@ void Gui::init(InitInfo* initInfo, GuiStyleEx* styleEx, float guiDpi) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.IniFilename = initInfo->iniPath; 
 
     ImGui_ImplWin32_Init(initInfo->hwnd);
 

@@ -10,5 +10,5 @@ struct CustomIniData {
 
 };
 /// @return true = success, false = failure/ini doesn't exist. 
-bool getCustomIniData(CustomIniData* dataIn); 
-void setCustomIniData(const CustomIniData& dataOut); 
+bool getCustomIniData(CustomIniData* dataIn, const char* iniPath);
+void setCustomIniData(const CustomIniData& dataOut, const char* iniPath);

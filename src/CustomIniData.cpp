@@ -4,8 +4,8 @@
 #include <string.h>
 #include <cassert>
 
-bool getCustomIniData(CustomIniData* dataIn) {
-	FILE* ini = fopen("imgui.ini", "r"); 
+bool getCustomIniData(CustomIniData* dataIn, const char* iniPath) {
+	FILE* ini = fopen(iniPath, "r"); 
 	if (ini == nullptr)  return false;
 
 	char line[100]; 
@@ -37,8 +37,8 @@ bool getCustomIniData(CustomIniData* dataIn) {
 
 }
 
-void setCustomIniData(const CustomIniData& dataOut) {
-	FILE* ini = fopen("imgui.ini", "a");
+void setCustomIniData(const CustomIniData& dataOut, const char* iniPath) {
+	FILE* ini = fopen(iniPath, "a");
 	if (ini == nullptr) return; 
 
 	fprintf(

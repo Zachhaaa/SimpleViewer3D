@@ -21,6 +21,8 @@
 #define NANOSVGRAST_IMPLEMENTATION
 #include <nanosvgrast.h>
 
+#include <shlobj.h>
+
 struct PushConstants {
     glm::mat4 view, proj; 
 };
@@ -48,6 +50,9 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
     bool maximized = false; 
     // Window creation
+    const char* iniRelativePath = "\\Simple Viewer 3D\\imgui.ini";
+    char* iniPath = (char*)malloc(MAX_PATH + strlen(iniRelativePath) + 1);
+    CORE_ASSERT(iniPath != nullptr); 
     {
         SetProcessDPIAware();
 
@@ -68,9 +73,24 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         
         int startPosX; 
         int startPosY; 
+        
+        // Get imgui.ini path
+        {
+
+            SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, iniPath);
+            char *endC = iniPath; 
+            for (; *endC != '\0'; endC++) {}
+            strcpy(endC, "\\Simple Viewer 3D");
+            CreateDirectoryA(iniPath, NULL); 
+            endC = iniPath;
+            for (; *endC != '\0'; endC++) {}
+            strcpy(endC, "\\imgui.ini"); 
+
+        }
+
         CustomIniData iniData{};
         inst->gui.sensitivity = 50; 
-        bool dataExists = getCustomIniData(&iniData);
+        bool dataExists = getCustomIniData(&iniData, iniPath);
         if (dataExists && (iniData.windowWidth != 0 && iniData.windowHeight != 0)) {
 
             inst->gui.sensitivity = (float)iniData.sensitivity;
@@ -793,6 +813,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         guiInitInfo.renderPass         = inst->rend.renderPass;
         guiInitInfo.subpass            = 0;
         guiInitInfo.imageCount         = inst->rend.imageCount;
+        guiInitInfo.iniPath            = iniPath;
 
         Gui::init(&guiInitInfo, &inst->gui.styleEx, inst->wind.dpi); 
  
@@ -1197,6 +1218,8 @@ void App::close(Core::Instance* inst) {
 
     }
 
+
+    const char* iniPath = ImGui::GetIO().IniFilename; 
     Gui::destroy();
 
     // set custom out data. 
@@ -1218,9 +1241,11 @@ void App::close(Core::Instance* inst) {
         if (dataOut.windowPosY < 0) dataOut.windowPosY = 0;
 
 
-        setCustomIniData(dataOut); 
+        setCustomIniData(dataOut, iniPath); 
 
     }
+
+    free((void*)iniPath); 
 
     vkDestroyImageView      (inst->rend.device, inst->vpRend.icoImgView,           nullptr);
     vkDestroyImage          (inst->rend.device, inst->vpRend.icoImg,               nullptr);

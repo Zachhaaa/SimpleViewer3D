@@ -43,6 +43,7 @@ struct InitInfo {
 	VkRenderPass     renderPass; 
 	uint32_t         subpass;
 	uint32_t         imageCount;
+	const char*      iniPath;
 
 };
 
