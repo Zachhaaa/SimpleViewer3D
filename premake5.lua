@@ -10,7 +10,7 @@ project "Simple Viewer 3D"
     objdir     "bin/obj"
 
     if not os.isdir "bin/shaderObjs" then
-        os.execute "mkdir bin\\shaderObjs"
+        os.execute "mkdir bin/shaderObjs"
     end
 
     includedirs {
@@ -41,6 +41,7 @@ project "Simple Viewer 3D"
         "Dependencies/imgui/backends/imgui_impl_vulkan.h",
         "Dependencies/imgui/backends/imgui_impl_win32.cpp",
         "Dependencies/glm/glm/**.hpp",
+        "resources.rc"
     }
 
     defines     { "_CRT_SECURE_NO_WARNINGS" }
