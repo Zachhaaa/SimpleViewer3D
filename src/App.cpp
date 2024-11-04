@@ -41,25 +41,28 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
     // Console creation
     {
+
 #ifdef ENABLE_VK_VALIDATION_LAYERS
         AllocConsole();
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
 #endif
+        
     }
 
     bool maximized = false; 
-    // Window creation
     const char* iniRelativePath = "\\Simple Viewer 3D\\imgui.ini";
     char* iniPath = (char*)malloc(MAX_PATH + strlen(iniRelativePath) + 1);
     CORE_ASSERT(iniPath != nullptr); 
+
+    // Window creation
     {
+
         SetProcessDPIAware();
 
         const wchar_t CLASS_NAME[] = L"Main Window";
 
-        WNDCLASS wc = { };
-
+        WNDCLASS wc{};
         wc.lpfnWndProc = Core::Callback::WindowProc;
         wc.hInstance = initInfo.hInstance;
         wc.lpszClassName = CLASS_NAME;
@@ -99,6 +102,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             inst->wind.m_size.x   = iniData.windowWidth; 
             inst->wind.m_size.y   = iniData.windowHeight; 
             maximized             = iniData.windowMaximized;  
+
         }
         else {
 
@@ -607,11 +611,11 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             VkResult err = vkCreateShaderModule(inst->rend.device, &vertModuleCreateInfo, nullptr, &vertModule);
             assertExit(err == VK_SUCCESS, "Vertex Module Creation failed");
 
-            shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            shaderStages[0].flags = 0;
-            shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+            shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            shaderStages[0].flags  = 0;
+            shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
             shaderStages[0].module = vertModule;
-            shaderStages[0].pName = "main";
+            shaderStages[0].pName  = "main";
 
             VkShaderModuleCreateInfo fragModuleCreateInfo{};
             fragModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -622,15 +626,15 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             err = vkCreateShaderModule(inst->rend.device, &fragModuleCreateInfo, nullptr, &fragModule);
             assertExit(err == VK_SUCCESS, "Vertex Module Creation failed");
 
-            shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            shaderStages[1].flags = 0;
-            shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+            shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            shaderStages[1].flags  = 0;
+            shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
             shaderStages[1].module = fragModule;
-            shaderStages[1].pName = "main";
+            shaderStages[1].pName  = "main";
 
             VkVertexInputBindingDescription bindingDescription{};
-            bindingDescription.binding = 0;
-            bindingDescription.stride = sizeof(mload::Vertex);
+            bindingDescription.binding   = 0;
+            bindingDescription.stride    = sizeof(mload::Vertex);
             bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
             VkVertexInputAttributeDescription attribDescriptions[2]{};
@@ -653,23 +657,23 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
             VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
             inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-            inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             inputAssembly.primitiveRestartEnable = VK_FALSE;
 
             VkPipelineViewportStateCreateInfo viewportState{};
             viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
             viewportState.viewportCount = 1;
-            viewportState.scissorCount = 1;
+            viewportState.scissorCount  = 1;
 
             VkPipelineRasterizationStateCreateInfo rasterizer{};
             rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-            rasterizer.depthClampEnable = VK_FALSE;
+            rasterizer.depthClampEnable        = VK_FALSE;
             rasterizer.rasterizerDiscardEnable = VK_FALSE;
-            rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-            rasterizer.lineWidth = 1.0f;
-            rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
-            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-            rasterizer.depthBiasEnable = VK_FALSE;
+            rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
+            rasterizer.lineWidth               = 1.0f;
+            rasterizer.cullMode                = VK_CULL_MODE_FRONT_BIT;
+            rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            rasterizer.depthBiasEnable         = VK_FALSE;
 
             VkPipelineMultisampleStateCreateInfo multisampling{};
             multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -688,20 +692,20 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
             VkPipelineColorBlendAttachmentState colorBlendAttachment{};
             colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            colorBlendAttachment.blendEnable = VK_FALSE;
+            colorBlendAttachment.blendEnable    = VK_FALSE;
 
             VkPipelineColorBlendStateCreateInfo colorBlending{};
             colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-            colorBlending.logicOpEnable = VK_FALSE;
-            colorBlending.logicOp = VK_LOGIC_OP_COPY;
+            colorBlending.logicOpEnable   = VK_FALSE;
+            colorBlending.logicOp         = VK_LOGIC_OP_COPY;
             colorBlending.attachmentCount = 1;
-            colorBlending.pAttachments = &colorBlendAttachment;
+            colorBlending.pAttachments    = &colorBlendAttachment;
 
             VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
             VkPipelineDynamicStateCreateInfo dynamicState{};
             dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
             dynamicState.dynamicStateCount = arraySize(dynamicStates);
-            dynamicState.pDynamicStates = dynamicStates;
+            dynamicState.pDynamicStates    = dynamicStates;
 
             VkPushConstantRange pcRange{};
             pcRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -735,7 +739,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             pipelineInfo.layout              = inst->vpRend.pipelineLayout;
             pipelineInfo.renderPass          = inst->vpRend.renderPass;
             pipelineInfo.subpass             = 0;
-            pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+            pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
             err = vkCreateGraphicsPipelines(inst->rend.device, nullptr, 1, &pipelineInfo, nullptr, &inst->vpRend.graphicsPipeline);
             assertExit(err == VK_SUCCESS, "Failed to create graphics pipeline");
@@ -744,8 +748,6 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             vkDestroyShaderModule(inst->rend.device, fragModule, nullptr);
 
         }
-
-        {} // Fixes visual studio bug with collapsing scopes
 
         // Texture sampler creation 
         {
@@ -797,8 +799,6 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
     }
 
-    {} // Fixes visual studio bug with collapsing scopes
-
     // GUI initialization
     {
 
@@ -827,6 +827,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         struct NSVGrasterizer* rast = nsvgCreateRasterizer();
         // Large logo
         {
+
             inst->gui.logoSize.x = inst->wind.dpi * 300;
             inst->gui.logoSize.y = inst->gui.logoSize.x; 
             int width = (int)inst->gui.logoSize.x;
@@ -857,6 +858,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
         // Icon
         {
+
             float& fwidth = inst->gui.styleEx.sizes.titleBarHeight;
             int width = (int)fwidth;
             int height = width;
@@ -917,6 +919,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             nsvgDelete(mouseControlsImage);
 
         }
+
         nsvgDeleteRasterizer(rast);
         nsvgDelete(image); 
 
@@ -924,6 +927,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
     // Open file if passed to command line
     {
+
         // If the path is surrounded in quotes
         if (initInfo.fileToOpen[0] == '\"') {
             size_t newStringLen = strlen(initInfo.fileToOpen) - 2; // -2 removes quotes 
@@ -975,7 +979,6 @@ void App::render(Core::Instance* inst) {
         PostQuitMessage(0);
         return;
     }
-    // TODO: compact parts of this cmd into another function.
     if (commands & Gui::cmd_openDialogBit) {
 
         // TODO: the following if is wrong, we are using more descriptor sets already than 1. 
@@ -1002,6 +1005,7 @@ void App::render(Core::Instance* inst) {
     }
 
     CORE_ASSERT(inst->vpRend.vpInstances.size() == inst->gui.vpDatas.size());
+
     // Resize/Close windows if needed
     for (int i = 0; i < inst->gui.vpDatas.size(); ++i) {
 
@@ -1009,7 +1013,8 @@ void App::render(Core::Instance* inst) {
         Core::ViewportInstance& vpInstance = inst->vpRend.vpInstances[i];
 
         // Close window
-        if      (!vpData.open) {
+        if (!vpData.open) {
+
             scopedTimer(t1, &inst->gui.stats.perfTimes.fileClose);
 
             vkDeviceWaitIdle(inst->rend.device);
@@ -1023,32 +1028,33 @@ void App::render(Core::Instance* inst) {
             inst->gui.vpDatas.erase(inst->gui.vpDatas.begin() + i);
 
             return;
+
         }
         else if (vpData.resize) {
-        vpData.resize = false;
 
-        scopedTimer(t1, &inst->gui.stats.perfTimes.viewportResize);
+            vpData.resize = false;
+
+            scopedTimer(t1, &inst->gui.stats.perfTimes.viewportResize);
 
 #ifdef DEVINFO
-        ++inst->gui.stats.resizeCount;
+            ++inst->gui.stats.resizeCount;
 #endif
 
-        vkDeviceWaitIdle(inst->rend.device);
+            vkDeviceWaitIdle(inst->rend.device);
 
-        // Don't run if this is the first time creating the viewport resources
-        if (vpInstance.framebuffer != VK_NULL_HANDLE) Core::destroyVpImageResources(inst->rend.device, &vpInstance); 
+            // Don't run if this is the first time creating the viewport resources
+            if (vpInstance.framebuffer != VK_NULL_HANDLE) Core::destroyVpImageResources(inst->rend.device, &vpInstance); 
 
-        VkExtent2D viewportSize = { (uint32_t)vpData.size.x, (uint32_t)vpData.size.y };
-        Core::createVpImageResources(inst, &vpInstance, viewportSize); 
+            VkExtent2D viewportSize = { (uint32_t)vpData.size.x, (uint32_t)vpData.size.y };
+            Core::createVpImageResources(inst, &vpInstance, viewportSize); 
 
         }
 
     }
 
-    {} // fixies visual studio bug with collapsing scopes
-
     // Rendering
     {
+
         scopedTimer(t1, &inst->gui.stats.perfTimes.renderingCommands);
 
         vkWaitForFences(inst->rend.device, 1, &inst->rend.frameFinishedFence, VK_TRUE, UINT64_MAX);
@@ -1069,6 +1075,7 @@ void App::render(Core::Instance* inst) {
 
         // Viewport render pass
         for (int i = 0; i < inst->gui.vpDatas.size(); ++i) {
+
             Gui::ViewportGuiData& vpData = inst->gui.vpDatas[i];
             if (!vpData.visible) continue; 
 
@@ -1127,13 +1134,13 @@ void App::render(Core::Instance* inst) {
         {
 
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = inst->rend.renderPass;
-            renderPassInfo.framebuffer = inst->rend.framebuffers[imageIndex];
+            renderPassInfo.renderPass        = inst->rend.renderPass;
+            renderPassInfo.framebuffer       = inst->rend.framebuffers[imageIndex];
             renderPassInfo.renderArea.offset = { 0, 0 };
             renderPassInfo.renderArea.extent = inst->rend.windowImageExtent;
 
             renderPassInfo.clearValueCount = 1;
-            renderPassInfo.pClearValues = clearValues;
+            renderPassInfo.pClearValues    = clearValues;
 
 
             vkCmdBeginRenderPass(inst->rend.commandBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -1150,13 +1157,13 @@ void App::render(Core::Instance* inst) {
             submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
             VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.pWaitSemaphores = &inst->rend.imageReadySemaphore;
-            submitInfo.pWaitDstStageMask = waitStages;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &inst->rend.commandBuff;
+            submitInfo.waitSemaphoreCount   = 1;
+            submitInfo.pWaitSemaphores      = &inst->rend.imageReadySemaphore;
+            submitInfo.pWaitDstStageMask    = waitStages;
+            submitInfo.commandBufferCount   = 1;
+            submitInfo.pCommandBuffers      = &inst->rend.commandBuff;
             submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &inst->rend.renderDoneSemaphore;
+            submitInfo.pSignalSemaphores    = &inst->rend.renderDoneSemaphore;
 
             err = vkQueueSubmit(inst->rend.graphicsQueue, 1, &submitInfo, inst->rend.frameFinishedFence);
             CORE_ASSERT(err == VK_SUCCESS && "Queue submit failed");
@@ -1164,10 +1171,10 @@ void App::render(Core::Instance* inst) {
             VkPresentInfoKHR presentInfo{};
             presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
             presentInfo.waitSemaphoreCount = 1;
-            presentInfo.pWaitSemaphores = &inst->rend.renderDoneSemaphore;
-            presentInfo.swapchainCount = 1;
-            presentInfo.pSwapchains = &inst->rend.swapchain;
-            presentInfo.pImageIndices = &imageIndex;
+            presentInfo.pWaitSemaphores    = &inst->rend.renderDoneSemaphore;
+            presentInfo.swapchainCount     = 1;
+            presentInfo.pSwapchains        = &inst->rend.swapchain;
+            presentInfo.pImageIndices      = &imageIndex;
 
             err = vkQueuePresentKHR(inst->rend.presentQueue, &presentInfo);
             CORE_ASSERT(err == VK_SUCCESS && "Presenting failed");
@@ -1179,17 +1186,19 @@ void App::render(Core::Instance* inst) {
     float timeError = inst->wind.refreshInterval - ImGui::GetIO().DeltaTime;
 
 #ifdef DEVINFO
+
     float* timesArray = inst->gui.stats.frameWaitTimesGraph; 
     constexpr uint32_t sampleCount = arraySize(inst->gui.stats.frameWaitTimesGraph);
     for (float* value = timesArray; value < timesArray + sampleCount; ++value)
         value[0] = value[1];
 
     timesArray[sampleCount - 1] = timeError;
+
 #endif 
 
     inst->rend.frameWaitTime += 0.5f * timeError;
 
-    sleepFor(inst->rend.frameWaitTime);
+    sleepFor(inst->rend.frameWaitTime); // This is needed because I want to have low input lag without rendering unnecessary frames. Serisouly, comment out this line and change present mode to VK_PRESENT_MODE_FIFO_KHR and see the difference. 
 
 }
 
@@ -1218,7 +1227,6 @@ void App::close(Core::Instance* inst) {
 
     }
 
-
     const char* iniPath = ImGui::GetIO().IniFilename; 
     Gui::destroy();
 
@@ -1239,7 +1247,6 @@ void App::close(Core::Instance* inst) {
         if (dataOut.windowPosX < 0) dataOut.windowPosX = 0;
         dataOut.windowPosY      = wp.rcNormalPosition.top;
         if (dataOut.windowPosY < 0) dataOut.windowPosY = 0;
-
 
         setCustomIniData(dataOut, iniPath); 
 

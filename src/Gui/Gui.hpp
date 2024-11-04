@@ -59,14 +59,16 @@ struct GuiSizes {
 
 };
 struct GuiColors {
+
 	ImVec4 shortcutText;
 	ImVec4 mainWndBackground; 
+
 };
 
 struct GuiStyleEx {
 
-	GuiSizes   sizes;
-	GuiColors  colors;
+	GuiSizes  sizes;
+	GuiColors colors;
 
 };
 

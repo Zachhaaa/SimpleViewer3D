@@ -13,8 +13,8 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
     {
 
         VkSwapchainCreateInfoKHR createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.flags = 0;
+        createInfo.sType  = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.flags  = 0;
         createInfo.surface = inst->rend.surface;
 
         VkSurfaceCapabilitiesKHR capabilities;
@@ -34,7 +34,6 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
                 std::clamp((unsigned)inst->wind.m_size.x, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
                 std::clamp((unsigned)inst->wind.m_size.y, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
             };
-
         }
 
         inst->rend.windowImageExtent = createInfo.imageExtent;
@@ -80,19 +79,19 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
 
             VkImageViewCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.flags = 0;
-            createInfo.image = inst->rend.swapchainImages[i];
+            createInfo.flags    = 0;
+            createInfo.image    = inst->rend.swapchainImages[i];
             createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = c_vlkn::format;
+            createInfo.format   = c_vlkn::format;
             createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
+            createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            createInfo.subresourceRange.baseMipLevel   = 0;
+            createInfo.subresourceRange.levelCount     = 1;
             createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
+            createInfo.subresourceRange.layerCount     = 1;
 
             VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &inst->rend.swapchainImageViews[i]);
             CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
@@ -213,19 +212,19 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.flags = 0;
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.format = c_vlkn::format;
-        imageInfo.extent = { size.width, size.height, 1 };
-        imageInfo.mipLevels = 1;
+        imageInfo.flags       = 0;
+        imageInfo.imageType   = VK_IMAGE_TYPE_2D;
+        imageInfo.format      = c_vlkn::format;
+        imageInfo.extent      = { size.width, size.height, 1 };
+        imageInfo.mipLevels   = 1;
         imageInfo.arrayLayers = 1;
-        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageInfo.samples     = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.tiling      = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.queueFamilyIndexCount = 1;
-        imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.pQueueFamilyIndices   = &inst->rend.graphicsQueueIndex;
+        imageInfo.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
 
         VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInst->image);
         CORE_ASSERT(err == VK_SUCCESS && "Image creation failed");
@@ -264,19 +263,19 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.flags = 0;
-        createInfo.image = vpInst->image;
+        createInfo.flags    = 0;
+        createInfo.image    = vpInst->image;
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = c_vlkn::format;
+        createInfo.format   = c_vlkn::format;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel   = 0;
+        createInfo.subresourceRange.levelCount     = 1;
         createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        createInfo.subresourceRange.layerCount     = 1;
 
         VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInst->imageView);
         CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
@@ -288,19 +287,19 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.flags = 0;
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.format = c_vlkn::format;
-        imageInfo.extent = { size.width, size.height, 1 };
-        imageInfo.mipLevels = 1;
+        imageInfo.flags       = 0;
+        imageInfo.imageType   = VK_IMAGE_TYPE_2D;
+        imageInfo.format      = c_vlkn::format;
+        imageInfo.extent      = { size.width, size.height, 1 };
+        imageInfo.mipLevels   = 1;
         imageInfo.arrayLayers = 1;
-        imageInfo.samples = c_vlkn::sampleCount;
-        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+        imageInfo.samples     = c_vlkn::sampleCount;
+        imageInfo.tiling      = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.queueFamilyIndexCount = 1;
-        imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.pQueueFamilyIndices   = &inst->rend.graphicsQueueIndex;
+        imageInfo.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
 
         VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInst->colorImage);
         CORE_ASSERT(err == VK_SUCCESS && "Image creation failed");
@@ -339,19 +338,19 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.flags = 0;
-        createInfo.image = vpInst->colorImage;
+        createInfo.flags    = 0;
+        createInfo.image    = vpInst->colorImage;
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = c_vlkn::format;
+        createInfo.format   = c_vlkn::format;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel   = 0;
+        createInfo.subresourceRange.levelCount     = 1;
         createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        createInfo.subresourceRange.layerCount     = 1;
 
         VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInst->colorImageView);
         CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
@@ -363,19 +362,19 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.flags = 0;
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.format = c_vlkn::depthFormat;
-        imageInfo.extent = { size.width, size.height, 1 };
-        imageInfo.mipLevels = 1;
+        imageInfo.flags       = 0;
+        imageInfo.imageType   = VK_IMAGE_TYPE_2D;
+        imageInfo.format      = c_vlkn::depthFormat;
+        imageInfo.extent      = { size.width, size.height, 1 };
+        imageInfo.mipLevels   = 1;
         imageInfo.arrayLayers = 1;
-        imageInfo.samples = c_vlkn::sampleCount;
-        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.samples     = c_vlkn::sampleCount;
+        imageInfo.tiling      = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage       = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.queueFamilyIndexCount = 1;
-        imageInfo.pQueueFamilyIndices = &inst->rend.graphicsQueueIndex;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.pQueueFamilyIndices   = &inst->rend.graphicsQueueIndex;
+        imageInfo.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
 
         VkResult err = vkCreateImage(inst->rend.device, &imageInfo, nullptr, &vpInst->depthImage);
         CORE_ASSERT(err == VK_SUCCESS && "Depth image creation failed");
@@ -414,19 +413,19 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.flags = 0;
-        createInfo.image = vpInst->depthImage;
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = c_vlkn::depthFormat;
+        createInfo.flags        = 0;
+        createInfo.image        = vpInst->depthImage;
+        createInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format       = c_vlkn::depthFormat;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
+        createInfo.subresourceRange.baseMipLevel   = 0;
+        createInfo.subresourceRange.levelCount     = 1;
         createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        createInfo.subresourceRange.layerCount     = 1;
 
         VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &vpInst->depthImageView);
         CORE_ASSERT(err == VK_SUCCESS && "Depth image view creation failed");
@@ -443,12 +442,12 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkWriteDescriptorSet writeDescriptor{};
         writeDescriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptor.dstSet = vpInst->descriptorSet;
-        writeDescriptor.dstBinding = 0;
+        writeDescriptor.dstSet          = vpInst->descriptorSet;
+        writeDescriptor.dstBinding      = 0;
         writeDescriptor.dstArrayElement = 0;
         writeDescriptor.descriptorCount = 1;
-        writeDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writeDescriptor.pImageInfo = &imageInfo;
+        writeDescriptor.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeDescriptor.pImageInfo      = &imageInfo;
 
         vkUpdateDescriptorSets(inst->rend.device, 1, &writeDescriptor, 0, nullptr);
 
@@ -461,12 +460,12 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = inst->vpRend.renderPass;
+        framebufferInfo.renderPass      = inst->vpRend.renderPass;
         framebufferInfo.attachmentCount = arraySize(attachments);
-        framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = size.width;
-        framebufferInfo.height = size.height;
-        framebufferInfo.layers = 1;
+        framebufferInfo.pAttachments    = attachments;
+        framebufferInfo.width           = size.width;
+        framebufferInfo.height          = size.height;
+        framebufferInfo.layers          = 1;
 
         VkResult err = vkCreateFramebuffer(inst->rend.device, &framebufferInfo, nullptr, &vpInst->framebuffer);
         CORE_ASSERT(err == VK_SUCCESS && "Frambuffer creation failed");
@@ -597,6 +596,7 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     switch (uMsg)
     {
     case WM_NCHITTEST: {
+
         POINT mpos = { LOWORD(lParam), HIWORD(lParam) };
         ScreenToClient(hwnd, &mpos);
 
@@ -636,6 +636,7 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             return HTRIGHT;
         }
         return HTCLIENT; 
+
     }
     case WM_SIZE: {
 
@@ -646,12 +647,16 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
         App::render(inst);
 
         return 0; 
+
     }
     case WM_MOVING: {
+
         App::render(inst);
         return 0;
+
     }
     case WM_ACTIVATE: {
+
         RECT rcClient;
         GetWindowRect(hwnd, &rcClient);
 
@@ -666,12 +671,15 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
     }
     case WM_GETMINMAXINFO: {
+
         LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
         lpMMI->ptMinTrackSize.x = c_minWidth;
         lpMMI->ptMinTrackSize.y = c_minHeight;
         return 0;
+
     }
     case WM_NCCALCSIZE: {
+
         if (wParam == TRUE)
         {
             NCCALCSIZE_PARAMS* pncsp = (NCCALCSIZE_PARAMS*)lParam;
@@ -695,13 +703,20 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             return 0;
         }
         break;
+
     }
-    case WM_CLOSE:
+    case WM_CLOSE: {
+
         PostQuitMessage(0);
         return 0;
-    case WM_DESTROY:
+
+    }
+    case WM_DESTROY: {
+
         PostQuitMessage(0);
         return 0;
+
+    }
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 

@@ -130,10 +130,7 @@ struct  VertexIndexBuffersInfo {
 
 };
 
-
-
 // functions
-
 void     createSwapchain           (Instance* inst, VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE);
 void     createFramebuffers        (VlknRenderInstance* rend); 
 void     cleanupSwapchainResources (VlknRenderInstance* rend);

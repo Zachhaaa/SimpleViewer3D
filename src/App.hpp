@@ -8,9 +8,9 @@ namespace App {
 
 struct InstanceInfo {
 
-    HINSTANCE       hInstance;
-    int             nCmdShow; 
-    const char*     fileToOpen; 
+    HINSTANCE   hInstance;
+    int         nCmdShow; 
+    const char* fileToOpen; 
 
 };
 

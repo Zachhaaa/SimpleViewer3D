@@ -191,12 +191,14 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
         io.AddKeyEvent(ImGuiKey_O, false);
         io.AddKeyEvent(ImGuiKey_Space, false);
     }
+
     bool quitShortcut = io.KeyCtrl && ImGui::IsKeyDown(ImGuiKey_Q);
     if (quitShortcut) *commands |= Gui::cmd_closeWindowBit;
 
     // Main dockspace
     ImGuiID dockspaceID;
     {
+
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
 
         ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -331,6 +333,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
     }
 
 #ifdef DEBUG
+
     ImGui::ShowDemoWindow();
     if (ImGui::Begin("GuiStyleEx")) {
 
@@ -346,6 +349,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
     ImGui::End(); 
 
     if (ImGui::Begin("Debug info")) {
+
         ImGui::SeparatorText("ViewportGuiData");
         if (data->vpDatas.size() > 0) {
 
@@ -435,6 +439,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
 #ifdef DEVINFO
 
     if (ImGui::Begin("App Data")) {
+
         ImGui::Text("Framerate: %f", io.Framerate);
         float (*func)(void*, int) = [](void* data, int i) { return ((float*)data)[i]; };
         constexpr float scale = 0.020;
@@ -462,12 +467,13 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
         ImGuiWindowFlags windFlags = ImGuiWindowFlags_NoScrollbar;
         windFlags |= ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings;
         ImGui::SetNextWindowDockID(dockspaceID, ImGuiCond_Once);
+
         if (ImGui::Begin(vpData.objectName.get(), &vpData.open, windFlags)) {
+
             bool focus = ImGui::IsWindowFocused(); 
             bool wKey = ImGui::IsKeyPressed(ImGuiKey_W, false); 
             data->lastFocusedVp = &vpData;
             if (io.KeyCtrl && wKey) data->lastFocusedVp->open = false;
-
 
             ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
 
@@ -483,7 +489,9 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
 
                 ImGui::SetCursorPos(ImGui::GetCursorStartPos() + ImVec2(0, 15));
                 if (ImGui::TreeNodeEx("File Info", ImGuiTreeNodeFlags_SpanTextWidth | ImGuiTreeNodeFlags_DefaultOpen)) {
+
                     if (ImGui::BeginTable("File Info Table", 2, ImGuiTableFlags_SizingFixedSame)) {
+
                         ImGui::TableNextRow();
                         ImGui::TableSetColumnIndex(0);
                         ImGui::Text("Triangles");
@@ -505,6 +513,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
                         ImGui::TableSetColumnIndex(1);
                         ImGui::Text("%s", vpData.isTextFormat ? "Yes" : "No");
                         ImGui::EndTable(); 
+
                     }
                     ImGui::TreePop(); 
                 }
@@ -561,6 +570,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
 
     ImGui::PopStyleVar();
     ImGui::EndFrame();
+
 }
 
 void Gui::destroy() {

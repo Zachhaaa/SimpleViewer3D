@@ -5,6 +5,7 @@
 #include <cassert>
 
 bool getCustomIniData(CustomIniData* dataIn, const char* iniPath) {
+
 	FILE* ini = fopen(iniPath, "r"); 
 	if (ini == nullptr)  return false;
 
@@ -38,6 +39,7 @@ bool getCustomIniData(CustomIniData* dataIn, const char* iniPath) {
 }
 
 void setCustomIniData(const CustomIniData& dataOut, const char* iniPath) {
+
 	FILE* ini = fopen(iniPath, "a");
 	if (ini == nullptr) return; 
 
@@ -53,4 +55,5 @@ void setCustomIniData(const CustomIniData& dataOut, const char* iniPath) {
 	fprintf(ini, "[Preferences]\nSensitivity=%i\n\n", dataOut.sensitivity);
 
 	fclose(ini);
+
 }
