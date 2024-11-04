@@ -11,7 +11,7 @@ You can download an installer from [here](https://simpleviewer3d.netlify.app/).
 Simple Viewer 3D is a Windows only app to view 3D files using the Vulkan API. It's designed to be simple and fast. 
 It launches fast, is responsive, and loads files quickly. 
 
-![App Gui](https://i.imgur.com/tSg15Rs.png)
+![App Gui](https://simpleviewer3d.netlify.app/SV3Dexample.png)
 
 ### Supported file types
  - .stl
