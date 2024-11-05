@@ -1,6 +1,6 @@
 # Simple Viewer 3D
 
-![Logo](Logo.svg)
+![Logo](SimpleViewer3D/Logo.svg)
 
 ## Install Prebuilt .exe
 
@@ -42,7 +42,17 @@ premake5 vs2022
 ```
 Premake commands for different compilers can be found [here](https://premake.github.io/docs/Using-Premake).
 
-3. Compile with your build system using one of the following configurations.
+3. There are 4 projects in this repo all are described below. IMPORTANT, make sure you don't build the installer until you build the first Dist builds below. Make sure you follow the build [instructions](##Building the installer) for the installer.
+
+ | Repo | Description |
+|:------|:--------------------------------------------|
+
+| __SimpleViewer3Dinstaller__  | Portable .exe for installing SimpleViewer3D |
+| __SimpleViewer3Dlauncher__ | Installed with installer and used when you use "open with" to open a file in an app on windows |
+| __SimpleViewer3Dsite__ REMOVE THIS AND ADD SimpleViewer3D| Repo for the [SimpleViewer3d website](https://simpleviewer3d.netlify.app/) |
+| __SimpleViewer3Duninstaller__ | Installed with installer, so the user can uninstall the app.   |
+
+4. Compile with your build system using one of the following configurations. 
 
 | Build | Description |
 |:------|:--------------------------------------------|
@@ -56,9 +66,3 @@ Premake commands for different compilers can be found [here](https://premake.git
 One of my goals for this project was to make it so anyone could [install](https://simpleviewer3d.netlify.app/) and use it.
 Because of that, there are 4 other repos associated with this project that make it possible.
 
-| Repo | Description |
-|:------|:--------------------------------------------|
-| [SimpleViewer3Dinstaller](https://github.com/Zachhaaa/SimpleViewer3Dinstaller) | Portable .exe for installing SimpleViewer3D |
-| [SimpleViewer3Dlauncher](https://github.com/Zachhaaa/SimpleViewer3Dlauncher) | Installed with installer and used when you use "open with" to open a file in an app on windows |
-| [SimpleViewer3Dsite](https://github.com/Zachhaaa/SimpleViewer3Dsite) | Repo for the [SimpleViewer3d website](https://simpleviewer3d.netlify.app/) |
-| [SimpleViewer3Duninstaller](https://github.com/Zachhaaa/SimpleViewer3Duninstaller) | Installed with installer, so the user can uninstall the app.   |

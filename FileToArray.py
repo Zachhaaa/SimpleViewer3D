@@ -9,6 +9,7 @@ else:
     last_slash += 1
 
 arrayName = sys.argv[1][last_slash:].replace(".", "_")
+arrayName = arrayName.replace(" ", "_")
 readFile.seek(0, 2); 
 outSourceFileStr = "unsigned char " + arrayName + "[" + str(readFile.tell()) + "] = {\n"
 readFile.seek(0, 0); 
