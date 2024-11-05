@@ -8,7 +8,8 @@ bin/
 
 imgui.ini
 
-src/FileArrays/*
-!src/FileArrays/ABOUT_THIS_DIRECTORY.txt
-
+SimpleViewer3D/src/FileArrays/*
+SimpleViewer3Dinstaller/src/FileArrays/*
+!SimpleViewer3D/src/FileArrays/ABOUT_THIS_DIRECTORY.txt
+!SimpleViewer3Dinstaller/src/FileArrays/ABOUT_THIS_DIRECTORY.txt
 *.zip

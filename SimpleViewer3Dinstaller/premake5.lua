@@ -14,10 +14,6 @@ project "SimpleViewer3Dinstaller"
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
     links       { "vulkan-1", "Shcore"}
     
-    os.execute "python UpdateZip.py"
-    os.execute "python ../FileToArray.py ../SimpleViewer3D/Logo.svg src/FileArrays/"
-    os.execute "python ../FileToArray.py \"ZipToInstall/Simple Viewer 3D.zip\" src/FileArrays/"
-
     files {
         "src/**.cpp", 
         "src/**.hpp", 
