@@ -13,6 +13,8 @@ project "SimpleViewer3Dinstaller"
     
     libdirs     { "%{os.getenv('VULKAN_SDK')}/lib" }
     links       { "vulkan-1", "Shcore"}
+	
+	os.execute "python AddFileArrays.py"
     
     files {
         "src/**.cpp", 

@@ -75,11 +75,8 @@ For the SimpleViewer3Dlauncher and SimpleViewer3Duninstaller projects.
  - __SimpleViewer3Dlauncher__
  - __SimpleViewer3Duninstaller__
 
-2. Run the following commands, this must be done anytime you make changes to any of the 3 projects above because the python script puts those in a .zip for the installer to use, and
-Premake converts the .zip into a c style array so it can be compiled into the .exe.
+2. Run the following command, this must be done anytime you make changes to any of the 3 projects above because the python script puts those in a .zip to be integrated into the installer .exe. 
 ```bash
 python SimpleViewer3Dinstaller/UpdateZip.py
-# For Visual Studio 2022
-premake5 vs2022
 ```
 3. Choose Build type, and Build the project.
