@@ -582,12 +582,16 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
     // Decriptor pool creation 
     {
 
+        VkDescriptorPoolSize poolSizeInfo{};
+        poolSizeInfo.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizeInfo.descriptorCount = 2;
+
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
         poolInfo.maxSets       = 2;
-        poolInfo.poolSizeCount = 0;
-        poolInfo.pPoolSizes    = nullptr;
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes    = &poolSizeInfo;
 
         VkResult err = vkCreateDescriptorPool(inst->rend.device, &poolInfo, nullptr, &inst->rend.descriptorPool);
         initCheck(err == VK_SUCCESS, "Simple Viewer 3D is not supported on your machine. Descriptor pool creation failed.");
