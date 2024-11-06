@@ -518,7 +518,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
                     ImGui::TreePop(); 
                 }
 
-                ImVec2 ControlsCursorPos = ImGui::GetCursorStartPos() + ImVec2(15, vpData.size.y - 1.25 * data->mouseControlsSize.y);
+                ImVec2 ControlsCursorPos = ImGui::GetCursorStartPos() + ImVec2(15, vpData.size.y - 1.25f * data->mouseControlsSize.y);
                 ImGui::SetCursorPos(ControlsCursorPos); 
                 ImGui::Image(data->mouseControlsTexID, data->mouseControlsSize); 
                 ImGui::SameLine(); 

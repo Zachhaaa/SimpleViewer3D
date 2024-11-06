@@ -1235,7 +1235,7 @@ void App::close(Core::Instance* inst) {
 
         CustomIniData dataOut; 
 
-        dataOut.sensitivity     = inst->gui.sensitivity;
+        dataOut.sensitivity     = (int)inst->gui.sensitivity;
         dataOut.windowMaximized = !!IsZoomed(inst->wind.hwnd);
 
         WINDOWPLACEMENT wp;
