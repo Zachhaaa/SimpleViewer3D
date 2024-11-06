@@ -44,13 +44,13 @@ Premake commands for different compilers can be found [here](https://premake.git
 
 3. There are 4 projects in this repo all are described below. Choose the one you want to build with your build system. 
 
-__IMPORTANT__, make sure you don't build the installer until you build the first Dist builds below. Make sure you follow the build [instructions](##Building the installer) for the installer.
+__IMPORTANT__: Make sure you don't build the installer until you build the first Dist builds below. Make sure you follow the build [instructions](##Building the installer) for the installer.
 
  | Project | Description |
 |:------|:--------------------------------------------|
-| __SimpleViewer3D__ | The main app pictured above |
-| __SimpleViewer3Dinstaller__  | Portable, standalone .exe for installing SimpleViewer3D |
-| __SimpleViewer3Dlauncher__ | Installed with installer and used when you use "open with" to open a file in an app on windows |
+| __SimpleViewer3D__ | The main app pictured above. |
+| __SimpleViewer3Dinstaller__  | Portable, standalone .exe for installing SimpleViewer3D. |
+| __SimpleViewer3Dlauncher__ | Installed with installer, and used when you use "open with" to open a file in an app on windows. |
 | __SimpleViewer3Duninstaller__ | Installed with installer, so the user can uninstall the app.   |
 
 4. Choose a build type as descibed below
@@ -75,5 +75,11 @@ For the SimpleViewer3Dlauncher and SimpleViewer3Duninstaller projects.
  - __SimpleViewer3Dlauncher__
  - __SimpleViewer3Duninstaller__
 
-2. Rerun Premake, this must be done anytime you make changes to any of the 3 projects above because the premake command puts those in a .zip for the installer to use.
-3. Choose Build type and Build
+2. Run the following commands, this must be done anytime you make changes to any of the 3 projects above because the python script puts those in a .zip for the installer to use, and
+Premake converts the .zip into a c style array so it can be compiled into the .exe.
+```bash
+python SimpleViewer3Dinstaller/UpdateZip.py
+# For Visual Studio 2022
+premake5 vs2022
+```
+3. Choose Build type, and Build the project.
