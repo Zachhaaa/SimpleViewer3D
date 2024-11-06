@@ -1,7 +1,7 @@
 import zipfile
 import os
 
-zipf = zipfile.ZipFile("SimpleViewer3Dinstaller/ZipToInstall/Simple Viewer 3D.zip", "w")
+zipf = zipfile.ZipFile("SimpleViewer3Dinstaller/ZipToInstall/Simple Viewer 3D.zip", "w", compression=zipfile.ZIP_DEFLATED)
 zipf.write("SimpleViewer3D/Logo.svg",                                    "Simple Viewer 3D/Logo.svg")
 zipf.write("SimpleViewer3D/Mouse-Controls.svg",                          "Simple Viewer 3D/Mouse-Controls.svg")
 zipf.write("SimpleViewer3D/bin/Dist/Simple Viewer 3D.exe",               "Simple Viewer 3D/Simple Viewer 3D.exe")
