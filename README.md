@@ -75,7 +75,7 @@ For the SimpleViewer3Dlauncher and SimpleViewer3Duninstaller projects.
  - __SimpleViewer3Dlauncher__
  - __SimpleViewer3Duninstaller__
 
-2. Run the following command, this must be done anytime you make changes to any of the 3 projects above because the python script puts those in a .zip to be integrated into the installer .exe. 
+2. Run the following command, this must be done anytime you make changes to any of the 3 projects above because the python script puts those in a .zip to be integrated into the installer .exe. __NOTE:__ This command has been buggy on some systems I have tested for whatever reason. I am still trying to figure it out.
 ```bash
 python SimpleViewer3Dinstaller/UpdateZip.py
 ```
