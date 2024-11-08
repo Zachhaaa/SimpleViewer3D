@@ -182,7 +182,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
     ImGuiIO& io = ImGui::GetIO();
 
     // Still need to fix this
-    bool openShortcut = io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_O, false) || ImGui::IsKeyPressed(ImGuiKey_Space, false);
+    bool openShortcut = io.KeyCtrl && (ImGui::IsKeyPressed(ImGuiKey_O, false) || ImGui::IsKeyPressed(ImGuiKey_Space, false));
     if (openShortcut) {
         *commands |= Gui::cmd_openDialogBit;
         // Because the window focus transfers to the open menu. The app never recieves an event for key release.
