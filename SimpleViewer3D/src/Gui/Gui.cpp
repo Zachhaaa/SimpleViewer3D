@@ -440,6 +440,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
 
     if (ImGui::Begin("App Data")) {
 
+        ImGui::Text("io.DeltaTime: %fms", 1000 * io.DeltaTime);
         ImGui::Text("Framerate: %f", io.Framerate);
         float (*func)(void*, int) = [](void* data, int i) { return ((float*)data)[i]; };
         constexpr float scale = 0.020;

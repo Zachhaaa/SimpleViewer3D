@@ -1196,8 +1196,8 @@ void App::render(Core::Instance* inst) {
 
 #endif 
 
-    inst->rend.frameWaitTime += 0.5f * timeError;
-
+    inst->rend.frameWaitTime += timeError;
+    if (inst->rend.frameWaitTime < 0.0f ) inst->rend.frameWaitTime = 0.0f; 
     sleepFor(inst->rend.frameWaitTime); // This is needed because I want to have low input lag without rendering unnecessary frames. Serisouly, comment out this line and change present mode to VK_PRESENT_MODE_FIFO_KHR and see the difference. 
 
 }

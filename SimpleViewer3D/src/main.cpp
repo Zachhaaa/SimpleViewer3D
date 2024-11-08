@@ -7,15 +7,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
 	App::init(&mainInstance, initInfo);
 
-	while (true) {
-		
-		MSG msg = {};
-		if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
-			if (msg.message == WM_QUIT) break;
+	MSG msg = {};
+	while (GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessageW(&msg);
 
-			TranslateMessage(&msg);
-			DispatchMessageW(&msg);
-		}
 		App::render(&mainInstance);
 	}
 
