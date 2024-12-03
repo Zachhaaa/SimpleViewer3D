@@ -8,6 +8,8 @@ project "SimpleViewer3Dlauncher"
 
     files { "*.cpp", "*.hpp", "*.h", "resources.rc" }
 
+	flags { "MultiProcessorCompile" }
+
     defines     { "_CRT_SECURE_NO_WARNINGS" }
 
     filter "configurations:Debug or configurations:OptDebug"

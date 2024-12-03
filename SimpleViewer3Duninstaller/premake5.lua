@@ -14,7 +14,7 @@ project "Uninstall"
 		"resources.rc"
     }
 	
-	flags { "NoManifest" }
+	flags { "NoManifest", "MultiProcessorCompile" }
 	
     defines     { "_CRT_SECURE_NO_WARNINGS" }
 

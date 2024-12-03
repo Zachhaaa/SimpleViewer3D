@@ -40,6 +40,8 @@ project "Simple Viewer 3D"
         "resources.rc"
     }
 
+	flags { "MultiProcessorCompile" }
+
     defines     { "_CRT_SECURE_NO_WARNINGS" }
 
     floatingpoint    "Fast"
