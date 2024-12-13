@@ -337,16 +337,16 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             compatableDevices.push_back(queriedDevice);
         }
         assertExit(compatableDevices.size() > 0, "No application compatable GPUs");
+        
+        inst->rend.physicalDevice = compatableDevices[0];
         for (VkPhysicalDevice compatableDevice : compatableDevices) {
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(compatableDevice, &deviceProperties);
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 inst->rend.physicalDevice = compatableDevice;
-                goto discreteFound;
+                break;
             }
         }
-        inst->rend.physicalDevice = compatableDevices[0];
-    discreteFound:;
 
     }
 
