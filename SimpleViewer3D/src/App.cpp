@@ -1026,6 +1026,7 @@ void App::render(Core::Instance* inst) {
             // Remove the window
             inst->vpRend.vpInstances.erase(inst->vpRend.vpInstances.begin() + i);
             inst->gui.vpDatas.erase(inst->gui.vpDatas.begin() + i);
+            inst->gui.lastFocusedVp =  inst->gui.vpDatas.size() > 0 ? &inst->gui.vpDatas.back() : nullptr;
 
             return;
 

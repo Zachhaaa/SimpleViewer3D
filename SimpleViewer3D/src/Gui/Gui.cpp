@@ -472,9 +472,9 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
         if (ImGui::Begin(vpData.objectName.get(), &vpData.open, windFlags)) {
 
             bool focus = ImGui::IsWindowFocused(); 
-            bool wKey = ImGui::IsKeyPressed(ImGuiKey_W, false); 
-            data->lastFocusedVp = &vpData;
-            if (io.KeyCtrl && wKey) data->lastFocusedVp->open = false;
+            if (focus) data->lastFocusedVp = &vpData;
+            if (io.KeyCtrl  && ImGui::IsKeyPressed(ImGuiKey_W, false) && focus) vpData.open = false;
+            if (io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_C, false) && focus) vpData.model[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
             ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
 
@@ -560,8 +560,6 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
                 }
             }
         }
-        // Down here to hit cache line from vpData.panPos()
-        if (io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_C, false)) vpData.model[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
       
         ImGui::End();
 
