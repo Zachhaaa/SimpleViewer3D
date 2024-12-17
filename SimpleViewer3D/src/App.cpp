@@ -127,7 +127,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         }
 
         inst->wind.hwnd = CreateWindowEx(
-            0,
+            WS_EX_ACCEPTFILES,
             CLASS_NAME,
             L"Simple Viewer 3D",
             WS_OVERLAPPEDWINDOW,

@@ -649,6 +649,19 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
         return 0; 
 
     }
+    case WM_DROPFILES: {
+
+        HDROP hdrop = (HDROP)wParam; 
+        UINT fileCount = DragQueryFileA(hdrop, 0xFFFFFFFF, nullptr, 0); 
+        for (UINT i = 0; i < fileCount; i++) {
+            char filePath[MAX_PATH]; 
+            DragQueryFileA(hdrop, i, filePath, MAX_PATH);
+            Core::openMeshFile(inst, filePath); 
+        }
+        
+        DragFinish(hdrop); 
+        return 0; 
+    }
     case WM_MOVING: {
 
         App::render(inst);
