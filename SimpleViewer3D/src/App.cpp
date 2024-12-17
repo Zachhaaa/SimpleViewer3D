@@ -231,7 +231,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
 #ifdef ENABLE_VK_VALIDATION_LAYERS
 
-        err = Core::CreateDebugUtilsMessengerEXT(inst->rend.instance, &validationCreateInfo, nullptr, &inst->rend.debugMessenger);
+        err = vlknh::createDebugUtilsMessengerEXT(inst->rend.instance, &validationCreateInfo, nullptr, &inst->rend.debugMessenger);
         assertExit(err == VK_SUCCESS, "CreateDebugUtilsMessengerEXT failed");
 
 #endif 
@@ -1277,7 +1277,7 @@ void App::close(Core::Instance* inst) {
     vkDestroyDevice(inst->rend.device, nullptr);
     vkDestroySurfaceKHR(inst->rend.instance, inst->rend.surface, nullptr);
 #ifdef ENABLE_VK_VALIDATION_LAYERS
-    Core::DestroyDebugUtilsMessengerEXT(inst->rend.instance, inst->rend.debugMessenger, nullptr);
+    vlknh::destroyDebugUtilsMessengerEXT(inst->rend.instance, inst->rend.debugMessenger, nullptr);
 #endif 
     vkDestroyInstance(inst->rend.instance, nullptr);
 

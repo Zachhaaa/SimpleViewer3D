@@ -142,10 +142,6 @@ bool     openMeshFile              (Instance* inst, const char* file);
 void     destroyGeometryData       (VkDevice device, ViewportInstance* vpInst);
 void     destroyVpImageResources   (VkDevice device, ViewportInstance* vpInst);   
 
-VkResult CreateDebugUtilsMessengerEXT  (VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
-void     DestroyDebugUtilsMessengerEXT (VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks * pAllocator);
-
-
     namespace Callback {
 
     LRESULT CALLBACK               WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam); 
