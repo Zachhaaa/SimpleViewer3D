@@ -850,7 +850,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             texImgResources.pTexImgMem        = &inst->vpRend.logoImgMem;
             texImgResources.pTexImgView       = &inst->vpRend.logoImgView;
 
-            inst->gui.logoTexID = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources); 
+            inst->gui.logoTexID = (ImTextureID)vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources); 
 
             free(logoImg); 
 
@@ -880,7 +880,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             texImgResources.pTexImgMem  = &inst->vpRend.icoImgMem;
             texImgResources.pTexImgView = &inst->vpRend.icoImgView;
 
-            inst->gui.icoTexID = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources);
+            inst->gui.icoTexID = (ImTextureID)vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources);
 
             free(logoImg);
 
@@ -913,7 +913,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             texImgResources.pTexImgMem  = &inst->vpRend.mouseControlsImgMem;
             texImgResources.pTexImgView = &inst->vpRend.mouseControlsImgView;
 
-            inst->gui.mouseControlsTexID = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources);
+            inst->gui.mouseControlsTexID = (ImTextureID)vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources);
 
             free(logoImg);
             nsvgDelete(mouseControlsImage);

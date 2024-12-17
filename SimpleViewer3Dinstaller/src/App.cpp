@@ -711,7 +711,7 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
         texImgResources.pTexImgMem  = &inst->rend.logoImgMem;
         texImgResources.pTexImgView = &inst->rend.logoImgView;
 
-        inst->gui.logoTexId = vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources); 
+        inst->gui.logoTexId = (ImTextureID)vlknh::createTextureImage(inst->rend.device, texImageInfo, texImgResources); 
 
         free(image);
         free(logoImg); 
