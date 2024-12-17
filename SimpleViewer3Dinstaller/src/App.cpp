@@ -262,20 +262,9 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
             vkGetPhysicalDeviceQueueFamilyProperties(queriedDevice, &queueFamilyPropertyCount, queueFamilies.data());
 
 
-            bool hasGraphicsQueue = false;
-            bool hasPresentQueue = false;
-            unsigned i = 0;
-            for (const VkQueueFamilyProperties& queueFamily : queueFamilies) {
-                if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-                    hasGraphicsQueue = true;
-
-                VkBool32 presentSupport = false;
-                vkGetPhysicalDeviceSurfaceSupportKHR(queriedDevice, i, inst->rend.surface, &presentSupport);
-                if (presentSupport)
-                    hasPresentQueue = true;
-
-                ++i;
-            }
+            uint32_t index;
+            bool hasGraphicsQueue = vlknh::getQueueFamilyFlagsIndex(queriedDevice, VK_QUEUE_GRAPHICS_BIT, &index);
+            bool hasPresentQueue  = vlknh::getQueueFamilyPresentIndex(queriedDevice, inst->rend.surface, &index);
             if (!hasGraphicsQueue || !hasPresentQueue) continue;
 
             uint32_t extensionCount;
@@ -325,21 +314,23 @@ void App::init(Core::Instance* inst, InstanceInfo* initInfo) {
 
         initCheck(deviceCount > 0, "Simple Viewer 3D is not supported on your machine. No GPUs are compatable with app.");
 
+        inst->rend.physicalDevice = compatableDevices[0];
         for (VkPhysicalDevice compatableDevice : compatableDevices) {
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(compatableDevice, &deviceProperties);
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 inst->rend.physicalDevice = compatableDevice;
-                goto discreteFound;
+                break;
             }
         }
-        inst->rend.physicalDevice = compatableDevices[0];
-    discreteFound:;
 
     }
 
     // Logical device creation
     {
+
+        vlknh::getQueueFamilyFlagsIndex   (inst->rend.physicalDevice, VK_QUEUE_GRAPHICS_BIT, &inst->rend.graphicsQueueIndex);
+        vlknh::getQueueFamilyPresentIndex (inst->rend.physicalDevice, inst->rend.surface,    &inst->rend.presentQueueIndex);
 
         VkDeviceQueueCreateInfo queueCreateInfos[2]{};
 
