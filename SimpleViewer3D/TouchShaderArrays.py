@@ -1,5 +1,5 @@
 import os
-
+import FileToArrayLib
 shaderDir    = "src/Shaders/"
 fileArrDir   = "src/FileArrays/" 
 shaderBinDir = "bin/shaderObjs/"
@@ -13,4 +13,4 @@ for shaderFile in shaderFiles:
     open(hFile, "a")
     spvFilePath = shaderBinDir + shaderFile + ".spv"; 
     if os.path.exists(spvFilePath): 
-        os.system(f"python ../FileToArray.py {spvFilePath} src/FileArrays/")
+        FileToArrayLib.ConvertFileToArray(spvFilePath, "src/FileArrays/")

@@ -6,6 +6,9 @@ bin/
 **.user
 **.filters
 
+*/__pycache__/
+__pycache__/
+
 imgui.ini
 
 SimpleViewer3D/src/FileArrays/*

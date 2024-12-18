@@ -1,5 +1,6 @@
 import zipfile
 import os
+import FileToArrayLib
 
 zipf = zipfile.ZipFile("SimpleViewer3Dinstaller/ZipToInstall/Simple Viewer 3D.zip", "w", compression=zipfile.ZIP_DEFLATED)
 zipf.write("SimpleViewer3D/Logo.svg",                                    "Simple Viewer 3D/Logo.svg")
@@ -12,5 +13,5 @@ zipf.close()
 
 print("Created Simple Viewer 3D.zip")
 
-os.system("python FileToArray.py SimpleViewer3D/Logo.svg SimpleViewer3Dinstaller/src/FileArrays/")
-os.system("python FileToArray.py \"SimpleViewer3Dinstaller/ZipToInstall/Simple Viewer 3D.zip\" SimpleViewer3Dinstaller/src/FileArrays/")
+FileToArrayLib.ConvertFileToArray("SimpleViewer3D/Logo.svg", "SimpleViewer3Dinstaller/src/FileArrays/")
+FileToArrayLib.ConvertFileToArray("SimpleViewer3Dinstaller/ZipToInstall/Simple Viewer 3D.zip", "SimpleViewer3Dinstaller/src/FileArrays/")
