@@ -141,8 +141,8 @@ void Gui::init(InitInfo* initInfo, GuiStyleEx* styleEx, float guiDpi) {
         colors[ImGuiCol_SeparatorHovered] = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
         colors[ImGuiCol_SeparatorActive] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
         colors[ImGuiCol_ResizeGrip] = ImVec4(0.26f, 0.59f, 0.98f, 0.20f);
-        colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
-        colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+        colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.44f, 0.39f, 0.25f, 1.00f);
+        colors[ImGuiCol_ResizeGripActive] = ImVec4(0.66f, 0.55f, 0.25f, 1.00f);
         colors[ImGuiCol_TabHovered] = ImVec4(0.44f, 0.39f, 0.25f, 1.00f);
         colors[ImGuiCol_Tab] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
         colors[ImGuiCol_TabSelected] = ImVec4(0.27f, 0.24f, 0.16f, 1.00f);
@@ -164,10 +164,12 @@ void Gui::init(InitInfo* initInfo, GuiStyleEx* styleEx, float guiDpi) {
         colors[ImGuiCol_TextLink] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
         colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
         colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
-        colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+        colors[ImGuiCol_NavCursor] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
         colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
         colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
         colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+
+
 
     }
 
