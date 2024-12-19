@@ -475,7 +475,7 @@ void Core::createVpImageResources(Instance *inst, ViewportInstance* vpInst, cons
 }
 bool Core::openMeshFile(Instance* inst, const char* file) {
 
-    scopedTimer(t1, &inst->gui.stats.perfTimes.openFile);
+    scopedTimer(t1, inst->gui.stats.perfTimes.getTimer("openFile"));
     if (file == nullptr) return false;
     if (file[0] == '\0') return false;
     const char* fileTitle = file;

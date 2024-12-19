@@ -36,7 +36,7 @@ struct PushConstants {
 
 void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
-    scopedTimer(t1, &inst->gui.stats.perfTimes.appLaunch);
+    scopedTimer(t1, inst->gui.stats.perfTimes.getTimer("appLaunch"));
     
     // Init Variables 
     const char* desiredLayers[] = { "VK_LAYER_KHRONOS_validation" };
@@ -598,7 +598,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         // Graphics Pipeline Creation
         {
 
-            scopedTimer(t3, &inst->gui.stats.perfTimes.graphicsPipelineCreation); 
+            scopedTimer(t3, inst->gui.stats.perfTimes.getTimer("graphicsPipelineCreation"));
 
             VkPipelineShaderStageCreateInfo shaderStages[2]{};
 
@@ -851,7 +851,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         NSVGimage* image = nsvgParseFromFile("Logo.svg", "px", 96);
         assertExit(image != NULL, "Failed to open or read Logo.svg");
 
-        scopedTimer(t2, &inst->gui.stats.perfTimes.logoRasterize);
+        scopedTimer(t2, inst->gui.stats.perfTimes.getTimer("logoRasterize"));
 
         struct NSVGrasterizer* rast = nsvgCreateRasterizer();
         // Large logo
@@ -1044,7 +1044,7 @@ void App::render(Core::Instance* inst) {
         // Close window
         if (!vpData.open) {
 
-            scopedTimer(t1, &inst->gui.stats.perfTimes.fileClose);
+            scopedTimer(t1, inst->gui.stats.perfTimes.getTimer("fileClose"));
 
             vkDeviceWaitIdle(inst->rend.device);
 
@@ -1064,7 +1064,7 @@ void App::render(Core::Instance* inst) {
 
             vpData.resize = false;
 
-            scopedTimer(t1, &inst->gui.stats.perfTimes.viewportResize);
+            scopedTimer(t1, inst->gui.stats.perfTimes.getTimer("viewportResize"));
 
 #ifdef DEVINFO
             ++inst->gui.stats.resizeCount;
@@ -1085,7 +1085,7 @@ void App::render(Core::Instance* inst) {
     // Rendering
     {
 
-        scopedTimer(t1, &inst->gui.stats.perfTimes.renderingCommands);
+        scopedTimer(t1, inst->gui.stats.perfTimes.getTimer("renderingCommands"));
 
         vkWaitForFences(inst->rend.device, 1, &inst->rend.frameFinishedFence, VK_TRUE, UINT64_MAX);
         vkResetFences  (inst->rend.device, 1, &inst->rend.frameFinishedFence);

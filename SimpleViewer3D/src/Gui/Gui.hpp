@@ -72,23 +72,35 @@ struct GuiStyleEx {
 
 };
 
-struct PerformanceTimes {
+struct PerformanceTimer {
 
-	float openFile;
-	float fileClose;
-	float viewportResize;
-	float appLaunch;
-	float graphicsPipelineCreation; 
-	float logoRasterize; 
-	float renderingCommands;
+	float time; // seconds
+	const char* label; 
 
 };
 
-struct DisplayData {
+struct PerformanceTimes {
+
+	PerformanceTimer timers[50]; 
+	int timerCount = 0; 
+
+	float* getTimer(const char* label) { 
+		for (int i = 0; i < timerCount; i++) {
+			for (int j = 0; timers[i].label[j] == label[j]; j++) { if (label[j] == '\0') return &timers[i].time; }
+		}
+		PerformanceTimer* pTimer = &timers[timerCount];
+		timerCount++; 
+		pTimer->label = label; 
+		return &pTimer->time;  
+	}
+
+}; 
+
+struct AppStats {
 
 	float            frameWaitTimesGraph[200];
 	uint32_t         resizeCount;
-	PerformanceTimes perfTimes;
+	PerformanceTimes perfTimes; 
 
 };
 
@@ -127,7 +139,7 @@ struct DrawData {
 	ViewportGuiData* lastFocusedVp;
 	float            sensitivity; 
 #ifdef DEVINFO
-	DisplayData stats{};
+	AppStats stats{};
 #endif
 	std::vector<ViewportGuiData> vpDatas;
 

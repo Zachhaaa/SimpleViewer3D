@@ -442,7 +442,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
 #ifdef DEVINFO
 
     if (ImGui::Begin("App Data")) {
-
+        
         ImGui::Text("io.DeltaTime: %fms", 1000 * io.DeltaTime);
         ImGui::Text("Framerate: %f", io.Framerate);
         float (*func)(void*, int) = [](void* data, int i) { return ((float*)data)[i]; };
@@ -450,16 +450,13 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
         constexpr int sampleCount = sizeof data->stats.frameWaitTimesGraph / sizeof(float);
         ImGui::PlotLines("Frame Time Error", func, data->stats.frameWaitTimesGraph, sampleCount, 0, nullptr, -scale, scale, ImVec2(0, 200));
         ImGui::Text("Scale: %.3fms", scale * 1000);
+
         ImGui::SeparatorText("Viewports Data");
         ImGui::Text("Viewport resizes: %u", data->stats.resizeCount);
+
         ImGui::SeparatorText("Performance Times");
-        ImGui::Text("openFile: %.2fms", 1000 * data->stats.perfTimes.openFile);
-        ImGui::Text("fileClose: %.2fms", 1000 * data->stats.perfTimes.fileClose);
-        ImGui::Text("viewportResize: %.2fms", 1000 * data->stats.perfTimes.viewportResize);
-        ImGui::Text("appLauch: %.2fms", 1000 * data->stats.perfTimes.appLaunch);
-        ImGui::Text("graphicsPipelineCreation: %.2fms", 1000 * data->stats.perfTimes.graphicsPipelineCreation);
-        ImGui::Text("logoRasterize: %.2fms", 1000 * data->stats.perfTimes.logoRasterize);
-        ImGui::Text("renderingCommands: %.2fms", 1000 * data->stats.perfTimes.renderingCommands);
+        for (int i = 0; i < data->stats.perfTimes.timerCount; i++) 
+            ImGui::Text("%s: %.2fms", data->stats.perfTimes.timers[i].label, 1000 * data->stats.perfTimes.timers[i].time);
 
     }
     ImGui::End();
