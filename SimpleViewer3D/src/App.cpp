@@ -8,6 +8,8 @@
 
 #include "FileArrays/shader_vert_spv.h"
 #include "FileArrays/shader_frag_spv.h"
+#include "FileArrays/MeshOutlineShader_vert_spv.h"
+#include "FileArrays/MeshOutlineShader_frag_spv.h"
 
 #include <ModelLoader.hpp>
 
@@ -275,6 +277,9 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyPropertyCount);
             vkGetPhysicalDeviceQueueFamilyProperties(queriedDevice, &queueFamilyPropertyCount, queueFamilies.data());
 
+            VkPhysicalDeviceFeatures deviceFeatures{};
+            vkGetPhysicalDeviceFeatures(queriedDevice, &deviceFeatures); 
+            if (!deviceFeatures.fillModeNonSolid) continue; 
 
             uint32_t index;
             bool hasGraphicsQueue = vlknh::getQueueFamilyFlagsIndex(queriedDevice, VK_QUEUE_GRAPHICS_BIT, &index);
@@ -365,6 +370,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         if (inst->rend.graphicsQueueIndex == inst->rend.presentQueueIndex) createInfo.queueCreateInfoCount -= 1;
 
         VkPhysicalDeviceFeatures deviceFeatures{};
+        deviceFeatures.fillModeNonSolid = VK_TRUE; 
         createInfo.pEnabledFeatures = &deviceFeatures;
         const char* extensionNames[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
         createInfo.ppEnabledExtensionNames = extensionNames;
@@ -592,6 +598,8 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         // Graphics Pipeline Creation
         {
 
+            scopedTimer(t3, &inst->gui.stats.perfTimes.graphicsPipelineCreation); 
+
             VkPipelineShaderStageCreateInfo shaderStages[2]{};
 
             VkShaderModuleCreateInfo vertModuleCreateInfo{};
@@ -693,7 +701,8 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
             colorBlending.attachmentCount = 1;
             colorBlending.pAttachments    = &colorBlendAttachment;
 
-            VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+            VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR }; 
+
             VkPipelineDynamicStateCreateInfo dynamicState{};
             dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
             dynamicState.dynamicStateCount = arraySize(dynamicStates);
@@ -735,6 +744,34 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
             err = vkCreateGraphicsPipelines(inst->rend.device, nullptr, 1, &pipelineInfo, nullptr, &inst->vpRend.graphicsPipeline);
             assertExit(err == VK_SUCCESS, "Failed to create graphics pipeline");
+
+            vkDestroyShaderModule(inst->rend.device, vertModule, nullptr);
+            vkDestroyShaderModule(inst->rend.device, fragModule, nullptr);
+
+            // Mesh outline pipeline
+            vertModuleCreateInfo.codeSize = sizeof(MeshOutlineShader_vert_spv);
+            vertModuleCreateInfo.pCode    = (uint32_t*)MeshOutlineShader_vert_spv;
+
+            err = vkCreateShaderModule(inst->rend.device, &vertModuleCreateInfo, nullptr, &vertModule);
+            assertExit(err == VK_SUCCESS, "Vertex module vertex creation failed");
+
+            shaderStages[0].module = vertModule;
+
+            fragModuleCreateInfo.codeSize = sizeof(MeshOutlineShader_frag_spv);
+            fragModuleCreateInfo.pCode    = (uint32_t*)MeshOutlineShader_frag_spv;
+
+            err = vkCreateShaderModule(inst->rend.device, &fragModuleCreateInfo, nullptr, &fragModule);
+            assertExit(err == VK_SUCCESS, "Mesh outline frag module creation failed");
+
+            shaderStages[1].module = fragModule;
+            
+            vertexInputInfo.vertexAttributeDescriptionCount = 1;
+            vertexInputInfo.pVertexAttributeDescriptions    = attribDescriptions;
+
+            rasterizer.polygonMode = VK_POLYGON_MODE_LINE;   
+
+            err = vkCreateGraphicsPipelines(inst->rend.device, nullptr, 1, &pipelineInfo, nullptr, &inst->vpRend.meshOutlinePipeline); 
+            assertExit(err == VK_SUCCESS, "Mesh outline graphics pipeline creation failed");
 
             vkDestroyShaderModule(inst->rend.device, vertModule, nullptr);
             vkDestroyShaderModule(inst->rend.device, fragModule, nullptr);
@@ -1118,6 +1155,10 @@ void App::render(Core::Instance* inst) {
             vkCmdPushConstants(inst->rend.commandBuff, inst->vpRend.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof pushConstants, &pushConstants);
 
             vkCmdDrawIndexed(inst->rend.commandBuff, vpData.indexCount, 1, 0, 0, 0);
+            if (vpData.showEdges) {
+                vkCmdBindPipeline(inst->rend.commandBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, inst->vpRend.meshOutlinePipeline); 
+                vkCmdDrawIndexed(inst->rend.commandBuff, vpData.indexCount, 1, 0, 0, 0);
+            }
 
             vkCmdEndRenderPass(inst->rend.commandBuff);
 
@@ -1205,11 +1246,12 @@ void App::close(Core::Instance* inst) {
      // Viewports cleanup
     {
 
-        vkDestroyDescriptorSetLayout (inst->rend.device, inst->vpRend.descriptorSetLayout, nullptr);
-        vkDestroySampler             (inst->rend.device, inst->vpRend.frameSampler,        nullptr);
-        vkDestroyPipeline            (inst->rend.device, inst->vpRend.graphicsPipeline,    nullptr);
-        vkDestroyPipelineLayout      (inst->rend.device, inst->vpRend.pipelineLayout,      nullptr);
-        vkDestroyRenderPass          (inst->rend.device, inst->vpRend.renderPass,          nullptr);
+        vkDestroyDescriptorSetLayout (inst->rend.device, inst->vpRend.descriptorSetLayout,    nullptr);
+        vkDestroySampler             (inst->rend.device, inst->vpRend.frameSampler,           nullptr);
+        vkDestroyPipeline            (inst->rend.device, inst->vpRend.graphicsPipeline,       nullptr);
+        vkDestroyPipeline            (inst->rend.device, inst->vpRend.meshOutlinePipeline,    nullptr);
+        vkDestroyPipelineLayout      (inst->rend.device, inst->vpRend.pipelineLayout,         nullptr);
+        vkDestroyRenderPass          (inst->rend.device, inst->vpRend.renderPass,             nullptr);
 
         for (Core::ViewportInstance& vpInstance : inst->vpRend.vpInstances) {
 

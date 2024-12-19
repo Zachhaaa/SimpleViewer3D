@@ -237,6 +237,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
             }
             if (ImGui::BeginMenu("Model")) {
                 if (ImGui::MenuItem("Center", "Shift + C", false, !!data->vpDatas.size())) data->lastFocusedVp->model[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+                if (ImGui::MenuItem("Show Edges", "E", false, !!data->vpDatas.size()))     data->lastFocusedVp->showEdges = !data->lastFocusedVp->showEdges;
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Preferences")) { 
@@ -454,6 +455,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
         ImGui::Text("fileClose: %.2fms", 1000 * data->stats.perfTimes.fileClose);
         ImGui::Text("viewportResize: %.2fms", 1000 * data->stats.perfTimes.viewportResize);
         ImGui::Text("appLauch: %.2fms", 1000 * data->stats.perfTimes.appLaunch);
+        ImGui::Text("graphicsPipelineCreation: %.2fms", 1000 * data->stats.perfTimes.graphicsPipelineCreation);
         ImGui::Text("logoRasterize: %.2fms", 1000 * data->stats.perfTimes.logoRasterize);
         ImGui::Text("renderingCommands: %.2fms", 1000 * data->stats.perfTimes.renderingCommands);
 
@@ -475,6 +477,7 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
             if (focus) data->lastFocusedVp = &vpData;
             if (io.KeyCtrl  && ImGui::IsKeyPressed(ImGuiKey_W, false) && focus) vpData.open = false;
             if (io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_C, false) && focus) vpData.model[3] = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+            if (               ImGui::IsKeyPressed(ImGuiKey_E, false) && focus) vpData.showEdges = !vpData.showEdges; 
 
             ImVec2 currentVpSize = ImGui::GetContentRegionAvail();
 

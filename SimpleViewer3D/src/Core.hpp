@@ -93,6 +93,7 @@ struct ViewportsRenderInstance {
     VkRenderPass          renderPass;
     VkPipelineLayout      pipelineLayout;
     VkPipeline            graphicsPipeline;
+    VkPipeline            meshOutlinePipeline; 
     VkSampler             frameSampler;
     VkDescriptorSetLayout descriptorSetLayout;
     VkImage               logoImg;

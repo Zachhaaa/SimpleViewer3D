@@ -78,6 +78,7 @@ struct PerformanceTimes {
 	float fileClose;
 	float viewportResize;
 	float appLaunch;
+	float graphicsPipelineCreation; 
 	float logoRasterize; 
 	float renderingCommands;
 
@@ -98,6 +99,7 @@ struct ViewportGuiData {
 	bool                    resize;
 	bool                    orbitActive;
 	bool                    panActive;
+	bool                    showEdges;
 	std::unique_ptr<char[]> objectName;
 	glm::mat4               model;
 	glm::vec3               modelCenter;
