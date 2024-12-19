@@ -1219,17 +1219,6 @@ void App::render(Core::Instance* inst) {
 
     float timeError = inst->wind.refreshInterval - ImGui::GetIO().DeltaTime;
 
-#ifdef DEVINFO
-
-    float* timesArray = inst->gui.stats.frameWaitTimesGraph; 
-    constexpr uint32_t sampleCount = arraySize(inst->gui.stats.frameWaitTimesGraph);
-    for (float* value = timesArray; value < timesArray + sampleCount; ++value)
-        value[0] = value[1];
-
-    timesArray[sampleCount - 1] = timeError;
-
-#endif 
-
     inst->rend.frameWaitTime += timeError;
     if (inst->rend.frameWaitTime < 0.0f ) inst->rend.frameWaitTime = 0.0f; 
     sleepFor(inst->rend.frameWaitTime); // This is needed because I want to have low input lag without rendering unnecessary frames. Serisouly, comment out this line and change present mode to VK_PRESENT_MODE_FIFO_KHR and see the difference. 

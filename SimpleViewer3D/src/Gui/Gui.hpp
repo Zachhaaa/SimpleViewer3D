@@ -98,7 +98,6 @@ struct PerformanceTimes {
 
 struct AppStats {
 
-	float            frameWaitTimesGraph[200];
 	uint32_t         resizeCount;
 	PerformanceTimes perfTimes; 
 

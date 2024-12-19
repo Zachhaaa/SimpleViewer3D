@@ -445,11 +445,6 @@ void Gui::draw(HWND hwnd, Commands* commands, DrawData* data) {
         
         ImGui::Text("io.DeltaTime: %fms", 1000 * io.DeltaTime);
         ImGui::Text("Framerate: %f", io.Framerate);
-        float (*func)(void*, int) = [](void* data, int i) { return ((float*)data)[i]; };
-        constexpr float scale = 0.020;
-        constexpr int sampleCount = sizeof data->stats.frameWaitTimesGraph / sizeof(float);
-        ImGui::PlotLines("Frame Time Error", func, data->stats.frameWaitTimesGraph, sampleCount, 0, nullptr, -scale, scale, ImVec2(0, 200));
-        ImGui::Text("Scale: %.3fms", scale * 1000);
 
         ImGui::SeparatorText("Viewports Data");
         ImGui::Text("Viewport resizes: %u", data->stats.resizeCount);
