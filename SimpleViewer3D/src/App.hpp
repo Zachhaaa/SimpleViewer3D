@@ -14,8 +14,8 @@ struct InstanceInfo {
 
 };
 
-void init   (Core::Instance* inst, const InstanceInfo& initInfo);
-void render (Core::Instance* inst);
-void close  (Core::Instance* inst);
+void init     (Core::Instance* inst, const InstanceInfo& initInfo);
+void runCycle (Core::Instance* inst);
+void close    (Core::Instance* inst);
                 
 }

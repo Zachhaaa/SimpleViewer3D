@@ -981,7 +981,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
      
 }
 
-void App::render(Core::Instance* inst) {
+void App::runCycle(Core::Instance* inst) {
     
     if (IsIconic(inst->wind.hwnd)) { sleepFor(0.005); return; }
 

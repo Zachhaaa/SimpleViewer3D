@@ -12,7 +12,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 
-		App::render(&mainInstance);
+		App::runCycle(&mainInstance);
 	}
 
 	App::close(&mainInstance);

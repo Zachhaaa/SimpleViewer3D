@@ -627,7 +627,7 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
         inst->wind.m_size.y = HIWORD(lParam);
 
         recreateSwapchain(inst);
-        App::render(inst);
+        App::runCycle(inst);
 
         return 0; 
 
@@ -647,7 +647,7 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     }
     case WM_MOVING: {
 
-        App::render(inst);
+        App::runCycle(inst);
         return 0;
 
     }
