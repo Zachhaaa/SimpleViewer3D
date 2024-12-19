@@ -973,9 +973,6 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
             }
         }
-        else {
-            Core::openMeshFile(inst, initInfo.fileToOpen);
-        }
 
     }
 
