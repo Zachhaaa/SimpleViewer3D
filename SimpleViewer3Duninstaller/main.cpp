@@ -120,7 +120,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	si.cb = sizeof si; 
 	PROCESS_INFORMATION pi{};
 	const wchar_t drive[3] = { installLoc[0], ':', '\0' }; 
-	const wchar_t* commandStrs[] = { L"cmd.exe /c ", drive, L" && cd \"", installLoc , L"\" && del Uninstall.exe && cd ../ && rmdir \"", cfg::appName,  L"\"" };
+	const wchar_t* commandStrs[] = { L"cmd.exe /c ", drive, L" && cd \"", installLoc , L"\" && sleep 1 && del Uninstall.exe && cd ../ && rmdir \"", cfg::appName,  L"\"" };
 	const wchar_t* command = concatMultipleW(commandStrs, arraySize(commandStrs)); 
 
 	CreateProcessW(
