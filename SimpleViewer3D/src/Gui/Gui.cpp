@@ -33,11 +33,21 @@ void Gui::init(InitInfo* initInfo, GuiStyleEx* styleEx, float guiDpi) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.IniFilename = initInfo->iniPath; 
+    io.IniFilename = initInfo->iniPath;
+
+    ImGui::GetPlatformIO().Platform_CreateVkSurface = [](ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface) {
+        VkWin32SurfaceCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        createInfo.hwnd      = (HWND)vp->PlatformHandle;
+        createInfo.hinstance = GetModuleHandle(nullptr);
+
+        VkResult err = vkCreateWin32SurfaceKHR((VkInstance)vk_inst, &createInfo, nullptr, (VkSurfaceKHR*)out_vk_surface);
+        if (err != VK_SUCCESS) return 1; 
+        return 0; 
+    };
 
     ImGui_ImplWin32_Init(initInfo->hwnd);
 
@@ -49,12 +59,12 @@ void Gui::init(InitInfo* initInfo, GuiStyleEx* styleEx, float guiDpi) {
     imguiInitInfo.Queue           = initInfo->graphicsQueue;
     imguiInitInfo.PipelineCache   = VK_NULL_HANDLE;
     imguiInitInfo.DescriptorPool  = initInfo->descriptorPool;
-    imguiInitInfo.RenderPass      = initInfo->renderPass;
-    imguiInitInfo.Subpass         = 0;
     imguiInitInfo.MinImageCount   = initInfo->imageCount;
     imguiInitInfo.ImageCount      = initInfo->imageCount;
-    imguiInitInfo.MSAASamples     = VK_SAMPLE_COUNT_1_BIT;
-    imguiInitInfo.Allocator       = nullptr;
+    imguiInitInfo.PipelineInfoMain.RenderPass      = initInfo->renderPass;
+    imguiInitInfo.PipelineInfoMain.Subpass         = 0;
+    imguiInitInfo.PipelineInfoMain.MSAASamples     = VK_SAMPLE_COUNT_1_BIT;
+    imguiInitInfo.Allocator = nullptr;
     imguiInitInfo.CheckVkResultFn = [](VkResult err) { assert(err == VK_SUCCESS && "check_vk_result failed"); };
     
     ImGui_ImplVulkan_Init(&imguiInitInfo);
