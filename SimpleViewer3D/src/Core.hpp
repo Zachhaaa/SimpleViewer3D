@@ -26,6 +26,12 @@
 #define arraySize(array) (sizeof(array) / sizeof(array[0]))
 #define CORE_ASSERT(exp) assert(exp); // to quickly change the assert function if anyone wishes todo so.
 
+#ifdef DEBUG
+#define assertExit(cond, msg) CORE_ASSERT(cond && msg); 
+#else 
+#define assertExit(cond, msg) if (!(cond)) exit(1); 
+#endif
+
 namespace Core {
 
 // structs
@@ -37,6 +43,14 @@ struct WindowInstance {
     float      refreshInterval;
 
 };
+
+struct SwapchainImageObjects {
+    VkImage       image;
+    VkImageView   imageView;
+    VkSemaphore   renderDoneSemaphore;
+    VkFramebuffer framebuffer;
+};
+constexpr size_t c_MaxImageCount = 4;
 
 struct VlknRenderInstance {
 
@@ -53,16 +67,14 @@ struct VlknRenderInstance {
     VkPresentModeKHR         presentMode;
     VkSwapchainKHR           swapchain;
     uint32_t                 imageCount;
-    VkImage*                 swapchainImages;
-    VkImageView*             swapchainImageViews;
+    SwapchainImageObjects    swapchainImageObjects[4]; 
+    VkSemaphore              imageReadySemaphore; 
+    VkFence                  frameFinishedFence;
     VkRenderPass             renderPass;
-    VkFramebuffer*           framebuffers;
     VkCommandPool            commandPool;
     VkCommandBuffer          commandBuff;
     VkDescriptorPool         descriptorPool;
-    VkSemaphore              renderDoneSemaphore;
-    VkSemaphore              imageReadySemaphore;
-    VkFence                  frameFinishedFence;
+    
     float                    frameWaitTime;
 
 };
@@ -132,7 +144,7 @@ struct  VertexIndexBuffersInfo {
 };
 
 // functions
-void     createSwapchain           (Instance* inst, VkSwapchainKHR oldSwapchain = VK_NULL_HANDLE);
+void     createSwapchain           (Instance* inst);
 void     createFramebuffers        (VlknRenderInstance* rend); 
 void     cleanupSwapchainResources (VlknRenderInstance* rend);
 void     recreateSwapchain         (Instance* inst);

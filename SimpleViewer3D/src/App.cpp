@@ -28,11 +28,6 @@
 struct PushConstants {
     glm::mat4 view, proj; 
 };
-#ifdef DEBUG
-#define assertExit(cond, msg) CORE_ASSERT(cond && msg); 
-#else 
-#define assertExit(cond, msg) if (!(cond)) exit(1); 
-#endif
 
 void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
@@ -397,7 +392,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
 
     }
 
-    Core::createSwapchain(inst, VK_NULL_HANDLE);
+    Core::createSwapchain(inst);
 
     // Render pass creation 
     {
@@ -502,15 +497,21 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        VkResult err1 = vkCreateSemaphore(inst->rend.device, &semaphoreInfo, nullptr, &inst->rend.imageReadySemaphore);
-        VkResult err2 = vkCreateSemaphore(inst->rend.device, &semaphoreInfo, nullptr, &inst->rend.renderDoneSemaphore);
-        assertExit((err1 == VK_SUCCESS || err2 == VK_SUCCESS), "Semaphore creation failed");
+        for (uint32_t i = 0; i < inst->rend.imageCount; i++) {
+        
+            VkResult err = vkCreateSemaphore(inst->rend.device, &semaphoreInfo, nullptr, &inst->rend.swapchainImageObjects[i].renderDoneSemaphore);
+            assertExit(err == VK_SUCCESS, "Semaphore creation failed");
+
+        }
+
+        VkResult err = vkCreateSemaphore(inst->rend.device, &semaphoreInfo, nullptr, &inst->rend.imageReadySemaphore);
+        assertExit(err == VK_SUCCESS, "Semaphore creation failed");
 
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        VkResult err = vkCreateFence(inst->rend.device, &fenceInfo, nullptr, &inst->rend.frameFinishedFence);
+        err = vkCreateFence(inst->rend.device, &fenceInfo, nullptr, &inst->rend.frameFinishedFence);
         assertExit(err == VK_SUCCESS, "Fence Creation failed");
 
     }
@@ -981,6 +982,7 @@ void App::init(Core::Instance* inst, const InstanceInfo& initInfo) {
      
 }
 
+static uint32_t frameIndex = 0; 
 void App::runCycle(Core::Instance* inst) {
     
     if (IsIconic(inst->wind.hwnd)) { sleepFor(0.005); return; }
@@ -1083,7 +1085,7 @@ void App::runCycle(Core::Instance* inst) {
     {
 
         scopedTimer(t1, inst->gui.stats.perfTimes.getTimer("renderingCommands"));
-
+     
         vkWaitForFences(inst->rend.device, 1, &inst->rend.frameFinishedFence, VK_TRUE, UINT64_MAX);
         vkResetFences  (inst->rend.device, 1, &inst->rend.frameFinishedFence);
 
@@ -1166,7 +1168,7 @@ void App::runCycle(Core::Instance* inst) {
 
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderPassInfo.renderPass        = inst->rend.renderPass;
-            renderPassInfo.framebuffer       = inst->rend.framebuffers[imageIndex];
+            renderPassInfo.framebuffer       = inst->rend.swapchainImageObjects[imageIndex].framebuffer;
             renderPassInfo.renderArea.offset = { 0, 0 };
             renderPassInfo.renderArea.extent = inst->rend.windowImageExtent;
 
@@ -1194,7 +1196,7 @@ void App::runCycle(Core::Instance* inst) {
             submitInfo.commandBufferCount   = 1;
             submitInfo.pCommandBuffers      = &inst->rend.commandBuff;
             submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores    = &inst->rend.renderDoneSemaphore;
+            submitInfo.pSignalSemaphores    = &inst->rend.swapchainImageObjects[imageIndex].renderDoneSemaphore;
 
             err = vkQueueSubmit(inst->rend.graphicsQueue, 1, &submitInfo, inst->rend.frameFinishedFence);
             CORE_ASSERT(err == VK_SUCCESS && "Queue submit failed");
@@ -1202,13 +1204,15 @@ void App::runCycle(Core::Instance* inst) {
             VkPresentInfoKHR presentInfo{};
             presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
             presentInfo.waitSemaphoreCount = 1;
-            presentInfo.pWaitSemaphores    = &inst->rend.renderDoneSemaphore;
+            presentInfo.pWaitSemaphores    = &inst->rend.swapchainImageObjects[imageIndex].renderDoneSemaphore;
             presentInfo.swapchainCount     = 1;
             presentInfo.pSwapchains        = &inst->rend.swapchain;
             presentInfo.pImageIndices      = &imageIndex;
 
             err = vkQueuePresentKHR(inst->rend.presentQueue, &presentInfo);
             CORE_ASSERT(err == VK_SUCCESS && "Presenting failed");
+
+            frameIndex = (frameIndex + 1) % inst->rend.imageCount; 
 
         }
          
@@ -1284,15 +1288,19 @@ void App::close(Core::Instance* inst) {
     vkDestroyImageView      (inst->rend.device, inst->vpRend.mouseControlsImgView, nullptr);
     vkDestroyImage          (inst->rend.device, inst->vpRend.mouseControlsImg,     nullptr);
     vkFreeMemory            (inst->rend.device, inst->vpRend.mouseControlsImgMem,  nullptr);
-    vkDestroyFence          (inst->rend.device, inst->rend.frameFinishedFence,     nullptr);
-    vkDestroySemaphore      (inst->rend.device, inst->rend.renderDoneSemaphore,    nullptr);
-    vkDestroySemaphore      (inst->rend.device, inst->rend.imageReadySemaphore,    nullptr);
+    for (unsigned i = 0; i < inst->rend.imageCount; i++) {
+        Core::SwapchainImageObjects& swapchainObjs = inst->rend.swapchainImageObjects[i];
+
+        vkDestroySemaphore(inst->rend.device, swapchainObjs.renderDoneSemaphore, nullptr);
+    }
+    vkDestroySemaphore(inst->rend.device, inst->rend.imageReadySemaphore, nullptr);
+    vkDestroyFence(inst->rend.device, inst->rend.frameFinishedFence, nullptr);
+
     vkDestroyDescriptorPool (inst->rend.device, inst->rend.descriptorPool,         nullptr);
     vkDestroyCommandPool    (inst->rend.device, inst->rend.commandPool,            nullptr);
     vkDestroyRenderPass     (inst->rend.device, inst->rend.renderPass,             nullptr);
     
     Core::cleanupSwapchainResources(&inst->rend); 
-    vkDestroySwapchainKHR(inst->rend.device, inst->rend.swapchain, nullptr);
 
     vkDestroyDevice(inst->rend.device, nullptr);
     vkDestroySurfaceKHR(inst->rend.instance, inst->rend.surface, nullptr);

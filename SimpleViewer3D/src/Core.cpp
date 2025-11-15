@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
+void Core::createSwapchain(Instance* inst) {
 
     // Swapchain creation 
     {
@@ -44,43 +44,47 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
         uint32_t queueFamilyIndices[] = { inst->rend.graphicsQueueIndex, inst->rend.presentQueueIndex };
         if (inst->rend.graphicsQueueIndex == inst->rend.presentQueueIndex) {
             createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            createInfo.queueFamilyIndexCount = 1;
+            createInfo.queueFamilyIndexCount = 0;
+            createInfo.pQueueFamilyIndices = nullptr; 
         }
         else {
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             createInfo.queueFamilyIndexCount = 2;
+            createInfo.pQueueFamilyIndices = queueFamilyIndices;
         }
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
         createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         createInfo.presentMode = inst->rend.presentMode;
         createInfo.clipped = VK_TRUE;
-        createInfo.oldSwapchain = oldSwapchain;
+        createInfo.oldSwapchain = VK_NULL_HANDLE;
 
         VkResult err = vkCreateSwapchainKHR(inst->rend.device, &createInfo, nullptr, &inst->rend.swapchain);
         CORE_ASSERT(err == VK_SUCCESS && "Swapchain creation failed");
 
     }
 
-    // Swap chain images
+    // Swap chainimages
     {
 
         vkGetSwapchainImagesKHR(inst->rend.device, inst->rend.swapchain, &inst->rend.imageCount, nullptr);
-        inst->rend.swapchainImages = new VkImage[inst->rend.imageCount];
-        vkGetSwapchainImagesKHR(inst->rend.device, inst->rend.swapchain, &inst->rend.imageCount, inst->rend.swapchainImages);
+        VkImage swapchainImagesTemp[c_MaxImageCount];
+        assertExit(inst->rend.imageCount <= c_MaxImageCount, "Too many swapchain images requested");
+        vkGetSwapchainImagesKHR(inst->rend.device, inst->rend.swapchain, &inst->rend.imageCount, swapchainImagesTemp);
+
+        for (uint32_t i = 0; i < inst->rend.imageCount; i++) {
+            inst->rend.swapchainImageObjects[i].image = swapchainImagesTemp[i];
+        }
 
     }
 
     // Swap chain image views
     {
-
-        inst->rend.swapchainImageViews = new VkImageView[inst->rend.imageCount];
         for (size_t i = 0; i < inst->rend.imageCount; ++i) {
 
             VkImageViewCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             createInfo.flags    = 0;
-            createInfo.image    = inst->rend.swapchainImages[i];
+            createInfo.image    = inst->rend.swapchainImageObjects[i].image;
             createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             createInfo.format   = c_vlkn::format;
             createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -93,7 +97,7 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount     = 1;
 
-            VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &inst->rend.swapchainImageViews[i]);
+            VkResult err = vkCreateImageView(inst->rend.device, &createInfo, nullptr, &inst->rend.swapchainImageObjects[i].imageView);
             CORE_ASSERT(err == VK_SUCCESS && "Image view creation failed");
 
         }
@@ -102,12 +106,9 @@ void Core::createSwapchain(Instance* inst, VkSwapchainKHR oldSwapchain) {
 
 }
 void Core::createFramebuffers(VlknRenderInstance* rend) {
-
-    rend->framebuffers = new VkFramebuffer[rend->imageCount];
-
     for (uint32_t i = 0; i < rend->imageCount; ++i) {
 
-        VkImageView attachments[] = { rend->swapchainImageViews[i] };
+        VkImageView attachments[] = { rend->swapchainImageObjects[i].imageView };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -118,7 +119,7 @@ void Core::createFramebuffers(VlknRenderInstance* rend) {
         framebufferInfo.height          = rend->windowImageExtent.height;
         framebufferInfo.layers          = 1;
 
-        VkResult err = vkCreateFramebuffer(rend->device, &framebufferInfo, nullptr, &rend->framebuffers[i]);
+        VkResult err = vkCreateFramebuffer(rend->device, &framebufferInfo, nullptr, &rend->swapchainImageObjects[i].framebuffer);
         CORE_ASSERT(err == VK_SUCCESS && "Frambuffer creation failed");
 
     }
@@ -127,14 +128,12 @@ void Core::createFramebuffers(VlknRenderInstance* rend) {
 void Core::cleanupSwapchainResources(VlknRenderInstance* rend) {
 
     for (unsigned i = 0; i < rend->imageCount; ++i) {
-        vkDestroyFramebuffer(rend->device, rend->framebuffers[i], nullptr);
+        SwapchainImageObjects& swapchainObjs = rend->swapchainImageObjects[i]; 
+
+        vkDestroyFramebuffer(rend->device, swapchainObjs.framebuffer, nullptr);
+        vkDestroyImageView(rend->device, swapchainObjs.imageView, nullptr);
     }
-    delete[] rend->framebuffers;
-    for (unsigned i = 0; i < rend->imageCount; ++i) {
-        vkDestroyImageView(rend->device, rend->swapchainImageViews[i], nullptr);
-    }
-    delete[] rend->swapchainImageViews;
-    delete[] rend->swapchainImages;
+    vkDestroySwapchainKHR(rend->device, rend->swapchain, nullptr);
 
 }
 void Core::recreateSwapchain(Instance* inst) {
@@ -142,7 +141,6 @@ void Core::recreateSwapchain(Instance* inst) {
     vkDeviceWaitIdle(inst->rend.device);
 
     cleanupSwapchainResources(&inst->rend);
-    vkDestroySwapchainKHR(inst->rend.device, inst->rend.swapchain, nullptr);
 
     createSwapchain(inst);
     createFramebuffers(&inst->rend);
@@ -682,7 +680,7 @@ LRESULT CALLBACK Core::Callback::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
             // Offset the pixel extension when maximized
             if (IsZoomed(hwnd)) {
-                LONG offset = (LONG)(7 * inst->wind.dpi);
+                LONG offset = (LONG)(6 * inst->wind.dpi);
                 pncsp->rgrc[0].left   += offset;
                 pncsp->rgrc[0].top    += offset;
                 pncsp->rgrc[0].right  -= offset;
