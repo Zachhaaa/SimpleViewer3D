@@ -60,7 +60,7 @@ project "SimpleViewer3Dinstaller"
         symbols  "Off"
         inlining "Auto"
         runtime "Release"
-        flags { "LinkTimeOptimization" }
+        linktimeoptimization "On"
 
     --  Fully optimized build that will be the distributed copy. 
     filter "configurations:Dist"
@@ -69,7 +69,7 @@ project "SimpleViewer3Dinstaller"
         symbols  "Off"
         inlining "Auto"
         runtime "Release"
-        flags { "LinkTimeOptimization" }
+        linktimeoptimization "On"
 
     filter "platforms:x64"
         architecture "x86_64"

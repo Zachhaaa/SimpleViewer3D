@@ -29,7 +29,7 @@ project "Uninstall"
         symbols  "Off"
         inlining "Auto"
         runtime "Release"
-        flags { "LinkTimeOptimization" }
-
+        linktimeoptimization "On"
+        
     filter "platforms:x64"
         architecture "x86_64"

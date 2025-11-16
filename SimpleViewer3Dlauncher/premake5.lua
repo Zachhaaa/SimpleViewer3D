@@ -23,7 +23,7 @@ project "SimpleViewer3Dlauncher"
         inlining "Auto"
         runtime  "Release"
         symbols  "Off"
-        flags   { "LinkTimeOptimization" }
+        linktimeoptimization "On"
 
     filter "platforms:x64"
         architecture "x86_64"
